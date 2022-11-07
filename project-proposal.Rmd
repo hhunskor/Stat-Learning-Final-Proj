@@ -1,0 +1,20 @@
+---
+title: "Math 218: Project Proposal"
+subtitle: "team name"
+author: "both names"
+output: pdf_document
+date: "11/7/2022"
+---
+
+```{r packages-data, message = F}
+# load necessary packages
+# load data
+```
+
+### Data description
+
+### Define variables you want to explore
+
+### EDA
+
+### Potential Research Questions

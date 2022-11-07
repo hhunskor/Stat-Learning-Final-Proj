@@ -1,0 +1,28 @@
+---
+title: "Math 218: Final Report"
+subtitle: "team name"
+author: "your names"
+output: pdf_document
+date: "?"
+---
+
+```{r packages-data, include = F}
+# load packages and data here
+```
+
+## Introduction
+
+## EDA
+
+```{r echo = F}
+# Notice that you don't see this code chunk when you knit, but the code still executes! This is what the echo = F statement in the code chunk header does: it runs the code, but doesn't display it in the knitted document.
+x <- 1+1
+```
+
+`r x`
+
+## Methodology
+
+## Results
+
+## Discussion
