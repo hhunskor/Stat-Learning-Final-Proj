@@ -1,6 +1,6 @@
 ---
 title: "Math 218: Project Proposal"
-subtitle: "team name"
+subtitle: "TestName"
 author: "both names"
 output: pdf_document
 date: "11/7/2022"
