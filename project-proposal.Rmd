@@ -13,8 +13,16 @@ date: "11/13/2022"
 
 ### Data description
 
+We picked the Ames Housing dataset compiled by Dean De Cock, which is publicly available on Kaggle. The dataset includes 79 variables on various house specifications for houses in Iowa. Here is a link to the dataset itself which includes a description of all 79 data fields:
+
+https://www.kaggle.com/competitions/house-prices-advanced-regression-techniques/data
+
 ### Define variables you want to explore
 
+The Kaggle competition that uses this dataset specifies house sale price as the target variable, and we plan to 
+
 ### EDA
+
+
 
 ### Potential Research Questions
