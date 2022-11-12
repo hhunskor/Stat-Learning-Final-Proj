@@ -1,30 +1,97 @@
 ---
 title: "Math 218: Project Proposal"
 subtitle: "Team Haydoja"
-author: "both names"
+author: "Payoja Adhikari and  Hayden Hunskor"
 output: pdf_document
 date: "11/13/2022"
 ---
 
 ```{r packages-data, message = F}
 library(tidyverse)
+library(dplyr)
+library(tidyr)
 ```
 
 ### Data description
 
-We picked the Ames Housing dataset compiled by Dean De Cock, which is publicly available on Kaggle. The dataset includes 79 variables on various house specifications for houses in Iowa. Here is a link to the dataset itself which includes a description of all 79 data fields:
+We picked the Ames Housing dataset compiled by Dean De Cock, which is publicly available on Kaggle. The dataset describes the sale of residential properties in Ames, Iowa from 2006 to 2010. It contains 1460 observatios with  79 variables on various house specifications. Here is a link to the dataset itself which includes a description of all 79 data fields:
 
 https://www.kaggle.com/competitions/house-prices-advanced-regression-techniques/data
 
 ### Define variables you want to explore
+Some of the variables that we want to explore in our data sets are:
 
-The Kaggle competition that uses this dataset specifies house sale price as the target variable, and we plan to 
+##### Categorical Variable:
+
+- Street: Type of road access to property (Gravel/Paved)
+
+- Utilities: Type of Utilities available
+
+- Neighborhood: Physical locations within Ames city limits
+
+- Heating: Type of heating
+
+- CentralAir: Central air conditioning (Yes/No)
+
+- PavedDrive: Paved driveway
+
+- GarageFinish: Interior finish of the garage
+
+- SaleType: Type of sale
+
+##### Continuous Variable:
+
+- SalePrice: Price of house 
+
+- PoolArea: Pool area in square feet
+
+- Lot Area: Lot size in square feet
+
+- TotalBsmtSF: Total square feet of basement area
+
+- Garage Area :Size of garage in square feet
+
+##### Discrete Variable
+
+- GrLivArea: Above ground living area square feet
+
+- FullBath: Number of full bathrooms above ground
+
+- HalfBath: Number of half bathrooms above ground
+
+- BedroomAbvGr: Number of bedrooms above ground
+
+- KitchensAbvGr: Number of kitchens above ground
+
+- FirePlaces: Number of fireplaces
+
+- YrBuilt: Original construction date
+
+- YrSold: Year house was sold
+
+
+* We eventually want to run a lasso regression for which we will be utilizing all 79 variables.
 
 ### EDA
 ```{r}
 train<-read_csv("data/train.csv")
+#find variables that are numeric
+numeric_var<-names(train)[which(sapply(train, is.numeric))]
+#find variables that are categorical
+categorical_var<- names(train)[-which(sapply(train, is.numeric))]
+#numeric variable that we want to work with
+var<- numeric_var[-c(1:3,5:6,8,10:12,16,18:19,27,35:36)]
+#summary table for numeric variables. The table includes some variable not mentioned earlier
+train %>%
+  select(var)%>%
+  summarise_all(list(mean = mean, std = sd), na.rm=TRUE)%>%
+  pivot_longer(cols = everything(), 
+               names_to = c('col', '.value'), 
+               names_sep = '_')%>%
+print(n=34)
 ```
 
 
-
 ### Potential Research Questions
+
+How does housing prices differ in Ames, Iowa based on the different housing features?
