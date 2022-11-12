@@ -7,8 +7,7 @@ date: "11/13/2022"
 ---
 
 ```{r packages-data, message = F}
-# load necessary packages
-# load data
+library(tidyverse)
 ```
 
 ### Data description
@@ -22,6 +21,9 @@ https://www.kaggle.com/competitions/house-prices-advanced-regression-techniques/
 The Kaggle competition that uses this dataset specifies house sale price as the target variable, and we plan to 
 
 ### EDA
+```{r}
+train<-read_csv("data/train.csv")
+```
 
 
 
