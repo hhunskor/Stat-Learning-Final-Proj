@@ -14,8 +14,7 @@ library(tidyr)
 
 ### Data description
 
-<<<<<<< HEAD
-We picked the Ames Housing dataset compiled by Dean De Cock, which is publicly available on Kaggle. The dataset includes extensive information on the sale of residential properties in Ames, Iowa from 2006 to 2010. It contains 1460 observations with 79 variables on various house specifications. The variables are a mix of continuos, categorical and discrete types. Here is a link to the dataset itself which includes a description of all the data fields:
+We picked the Ames Housing dataset compiled by Dean De Cock, which is publicly available on Kaggle. The dataset includes extensive information on the sale of residential properties in Ames, Iowa from 2006 to 2010. It contains 1460 observations with 79 variables on various house specifications. The variables are a mix of continuous, categorical and discrete types. Here is a link to the dataset itself which includes a description of all the data fields:
 
 https://www.kaggle.com/competitions/house-prices-advanced-regression-techniques/data
 
