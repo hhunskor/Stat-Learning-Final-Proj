@@ -1,7 +1,7 @@
 ---
 title: "Math 218: Project Proposal"
 subtitle: "Team Haydoja"
-author: "Payoja Adhikari and  Hayden Hunskor"
+author: "Payoja Adhikari and Hayden Hunskor"
 output: pdf_document
 date: "11/13/2022"
 ---
@@ -14,12 +14,13 @@ library(tidyr)
 
 ### Data description
 
-We picked the Ames Housing dataset compiled by Dean De Cock, which is publicly available on Kaggle. The dataset describes the sale of residential properties in Ames, Iowa from 2006 to 2010. It contains 1460 observatios with  79 variables on various house specifications. Here is a link to the dataset itself which includes a description of all 79 data fields:
+We picked the Ames Housing dataset compiled by Dean De Cock, which is publicly available on Kaggle. The dataset includes extensive information on the sale of residential properties in Ames, Iowa from 2006 to 2010. It contains 1460 observations with  79 variables on various house specifications. Here is a link to the dataset itself which includes a description of all the data fields:
 
 https://www.kaggle.com/competitions/house-prices-advanced-regression-techniques/data
 
 ### Define variables you want to explore
-Some of the variables that we want to explore in our data sets are:
+
+Rather than list out all 79 variables from our dataset, we selected a few that we found particularly interesting and listed them below. That said, we are interested in starting out with models that include all available predictors and applying various shrinkage techniques.
 
 ##### Categorical Variable:
 
@@ -69,9 +70,6 @@ Some of the variables that we want to explore in our data sets are:
 
 - YrSold: Year house was sold
 
-
-* We eventually want to run a lasso regression for which we will be utilizing all 79 variables.
-
 ### EDA
 ```{r}
 train<-read_csv("data/train.csv")
@@ -94,4 +92,6 @@ print(n=34)
 
 ### Potential Research Questions
 
-How does housing prices differ in Ames, Iowa based on the different housing features?
+How do housing prices differ in Ames, Iowa based on the different housing features?
+
+Which property data fields are the most accurate predictors of a house's sale price?
