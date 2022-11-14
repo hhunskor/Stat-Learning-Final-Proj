@@ -10,6 +10,7 @@ date: "11/13/2022"
 library(tidyverse)
 library(dplyr)
 library(tidyr)
+library(ggcorrplot)
 ```
 
 ### Data description
@@ -58,7 +59,6 @@ Rather than list out all 79 variables from our dataset, we selected a few that w
 
 ##### Discrete Variable
 
-
 - FullBath: Number of full bathrooms above ground
 
 - HalfBath: Number of half bathrooms above ground
@@ -74,31 +74,73 @@ Rather than list out all 79 variables from our dataset, we selected a few that w
 - YrSold: Year house was sold
 
 ### EDA
-```{r}
-train<-read_csv("data/train.csv")
-#find variables that are numeric
-numeric_var<-names(train)[which(sapply(train, is.numeric))]
-#find variables that are categorical
-categorical_var<- names(train)[-which(sapply(train, is.numeric))]
-#numeric variable that we want to work with
-var<- numeric_var[-c(1:3,5:6,8,10:12,16,18:19,27,35:36)]
-#summary table for numeric variables. The table includes some variable not mentioned earlier
-train %>%
-  select(var)%>%
-  summarise_all(list(mean = mean, std = sd), na.rm=TRUE)%>%
-  pivot_longer(cols = everything(), 
-               names_to = c('col', '.value'), 
-               names_sep = '_')%>%
-print(n=34)
+
+The Kaggle zip file included both a train and a test set. The key difference between the two is that only the train set has the SalePrice data field. The following code chunk loads in the two data sets and then combines them into one data frame with NA values for testing SalePrice data.
+
+```{r eval = F}
+#Read in data
+train <- read_csv("data/train.csv")
+test <- read_csv("data/test.csv")
+
+#Add NA values for SalePrice to test set
+test$SalePrice <- rep(NA, nrow(test))
+
+#Join train and test set
+all_data <- rbind(test, train)
 ```
 
-Correlation between housing prices and some of the discrete and categorical data:
+The following code chunk isolates numeric and categorical variables:
 
 ```{r}
-library("ggcorrplot")
-correlation<-train%>%
-  select(SalePrice, PoolArea,LotArea, TotalBsmtSF, GarageArea,GrLivArea, FullBath,HalfBath,BedroomAbvGr,KitchenAbvGr,Fireplaces)
+#Find numeric variables
+numeric_var <- names(all_data)[which(sapply(train, is.numeric))]
+
+#Find categorical variables
+categorical_var <- names(all_data)[-which(sapply(train, is.numeric))]
+
+#Numeric variables that we want to work with
+var <- numeric_var[-c(1:3,5:6,8,10:12,16,18:19,27,35:36)]
+
+#Summary table for numeric variables
+all_data %>%
+  select(var) %>%
+  summarise_all(list(mean = mean, std = sd), na.rm = TRUE) %>%
+  pivot_longer(cols = everything(), 
+               names_to = c('col', '.value'), 
+               names_sep = '_')
+```
+
+The following code chunk takes a deeper look at the SalePrice feature:
+
+```{r}
+#Histogram of house prices
+train %>%
+  ggplot(., aes(x = SalePrice)) +
+  geom_histogram()
+
+#Average house price over time
+train %>%
+  group_by(YrSold) %>%
+  summarise(meanPrice = mean(SalePrice)) %>%
+  ggplot(., aes(x = YrSold, y = meanPrice)) +
+  geom_point() + geom_line()
+```
+
+Judging from these two plots, the distribution of SalePrice in our training set is slightly right skewed. This suggests that there are some outlier properties with significantly higher sale prices.
+
+Also, the huge drop in average sale price of houses in our data coincides with the 2008 housing market crash. When predicting sale price it may be helpful to try to account for some of the macroeconomic factors at play, such as the general state of the housing market at a national level. This may be beyond the scope of our work, but definitely something worth addressing in our project limitations.
+
+Correlation between some of the numeric and discrete data fields (most importantly SalePrice):
+
+```{r}
+
+#Note that we are only using the training data here because it has actual values for SalePrice
+
+correlation <- train %>%
+  select(SalePrice, PoolArea, LotArea, TotalBsmtSF, GarageArea, GrLivArea, FullBath, HalfBath, BedroomAbvGr, KitchenAbvGr, Fireplaces)
+
 corr_mtx <- cor(correlation, use = "pairwise.complete.obs")
+
 ggcorrplot(corr_mtx, # input the correlation matrix
            hc.order = TRUE, 
            type = "upper", 
@@ -111,6 +153,6 @@ As seen from above, housing prices seem to be the most correlated (positively) w
 
 ### Potential Research Questions
 
-How do housing prices differ in Ames, Iowa based on the different housing features?
-
-Which property data fields are the most accurate predictors of a house's sale price?
+- How have housing prices changed over time?
+- How do housing prices differ in Ames, Iowa based on the different housing features?
+- Which property data fields are the most accurate predictors of a house's sale price?
