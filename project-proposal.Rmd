@@ -14,7 +14,8 @@ library(tidyr)
 
 ### Data description
 
-We picked the Ames Housing dataset compiled by Dean De Cock, which is publicly available on Kaggle. The dataset includes extensive information on the sale of residential properties in Ames, Iowa from 2006 to 2010. It contains 1460 observations with  79 variables on various house specifications. Here is a link to the dataset itself which includes a description of all the data fields:
+<<<<<<< HEAD
+We picked the Ames Housing dataset compiled by Dean De Cock, which is publicly available on Kaggle. The dataset includes extensive information on the sale of residential properties in Ames, Iowa from 2006 to 2010. It contains 1460 observations with 79 variables on various house specifications. The variables are a mix of continuos, categorical and discrete types. Here is a link to the dataset itself which includes a description of all the data fields:
 
 https://www.kaggle.com/competitions/house-prices-advanced-regression-techniques/data
 
@@ -40,6 +41,8 @@ Rather than list out all 79 variables from our dataset, we selected a few that w
 
 - SaleType: Type of sale
 
+- SaleCondition: Condition of sale
+
 ##### Continuous Variable:
 
 - SalePrice: Price of house 
@@ -52,9 +55,10 @@ Rather than list out all 79 variables from our dataset, we selected a few that w
 
 - Garage Area :Size of garage in square feet
 
+- GrLivArea: Above ground living area square feet
+
 ##### Discrete Variable
 
-- GrLivArea: Above ground living area square feet
 
 - FullBath: Number of full bathrooms above ground
 
@@ -89,6 +93,22 @@ train %>%
 print(n=34)
 ```
 
+Correlation between housing prices and some of the discrete and categorical data:
+
+```{r}
+library("ggcorrplot")
+correlation<-train%>%
+  select(SalePrice, PoolArea,LotArea, TotalBsmtSF, GarageArea,GrLivArea, FullBath,HalfBath,BedroomAbvGr,KitchenAbvGr,Fireplaces)
+corr_mtx <- cor(correlation, use = "pairwise.complete.obs")
+ggcorrplot(corr_mtx, # input the correlation matrix
+           hc.order = TRUE, 
+           type = "upper", 
+           lab = TRUE,
+           method = "circle", 
+           colors = c("tomato2", "white", "springgreen3"))
+```
+
+As seen from above, housing prices seem to be the most correlated (positively) with above ground living area (in sq. ft), total basement area(in sq. ft) and garage area (in sq. ft). The price is also moderately correlated with number of full bathrooms.
 
 ### Potential Research Questions
 
