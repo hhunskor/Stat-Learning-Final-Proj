@@ -1,16 +1,27 @@
 ---
 title: "Math 218: Final Report"
-subtitle: "team name"
-author: "your names"
+subtitle: "Project Haydoja"
+author: "Peyoja and Hayden"
 output: pdf_document
 date: "?"
 ---
 
 ```{r packages-data, include = F}
-# load packages and data here
+
+library(tidyverse)
+dat <- read_csv("data/train.csv")
+
 ```
 
 ## Introduction
+
+For our final project, we decided to look at the Ames Housing dataset, which includes extensive information on the sale of residential properties in Ames, Iowa from 2006 to 2010. It contains 1460 observations with 79 variables on various house specifications. The variables are a mix of continuous, categorical and discrete types. The data is publicly available on Kaggle - below is a link to the dataset itself which includes a description of all the data fields:
+
+https://www.kaggle.com/competitions/house-prices-advanced-regression-techniques/data
+
+
+
+
 
 ## EDA
 
