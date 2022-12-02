@@ -19,9 +19,13 @@ For our final project, we decided to look at the Ames Housing dataset, which inc
 
 https://www.kaggle.com/competitions/house-prices-advanced-regression-techniques/data
 
+The goal of our project is to implement as many of the modeling techniques we've covered in this course as possible. To do so, we decided to focus on two modeling problems: one regression and one classification.
 
+Below are our research questions:
 
+1. Which modeling technique most accurately predicts housing prices using the other available housing features?
 
+2. Which modeling technique most accurately classifies houses by neighborhood based on the other available housing features?
 
 ## EDA
 
@@ -30,7 +34,32 @@ https://www.kaggle.com/competitions/house-prices-advanced-regression-techniques/
 x <- 1+1
 ```
 
-`r x`
+```{r Correlation}
+
+```
+
+
+### Data Cleaning
+
+```{r}
+
+#Convert 'Alley' to binary
+dat$Alley <- ifelse(is.na(dat$Alley), 0, 1)
+
+#Get rid of Utilities variable
+dat %>%
+  group_by(Utilities) %>%
+  summarise(count = n())
+
+dat <- select(dat, -Utilities)
+
+#Dropping Condition2 variable
+dat %>%
+  group_by(Condition2) %>%
+  summarise(count = n())
+  
+```
+
 
 ## Methodology
 
