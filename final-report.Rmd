@@ -1,17 +1,25 @@
 ---
 title: "Math 218: Final Report"
 subtitle: "Project Haydoja"
-author: "Peyoja and Hayden"
+author: "Payoja and Hayden"
 output: pdf_document
 date: "?"
+editor_options: 
+  chunk_output_type: inline
 ---
 
 ```{r packages-data, include = F}
-
+library('fastDummies')
 library(tidyverse)
+library(dplyr)
+library(tidyr)
+library(ggcorrplot)
 dat <- read_csv("data/train.csv")
+summary(dat)
+lapply(dat,class)
 
 ```
+
 
 ## Introduction
 
@@ -27,42 +35,226 @@ Below are our research questions:
 
 2. Which modeling technique most accurately classifies houses by neighborhood based on the other available housing features?
 
+
+### Data Description
+
+Rather than use all 79 variables from the dataset for our analysis, we decided to select a few that we found particularly interesting. The variables that we have decided to use in this report is listed below.
+
+##### Categorical Variable:
+
+
+- Neighborhood: Physical locations within Ames city limits
+
+- CentralAir: Central air conditioning (Yes/No)
+
+- PavedDrive: Paved driveway
+
+- GarageFinish: Interior finish of the garage
+
+##### Continuous Variable:
+
+- SalePrice: Price of house 
+
+- PoolArea: Pool area in square feet
+
+- Lot Area: Lot size in square feet
+
+- TotalBsmtSF: Total square feet of basement area
+
+- Garage Area :Size of garage in square feet
+
+- GrLivArea: Above ground living area square feet
+
+##### Discrete Variable
+
+- FullBath: Number of full bathrooms above ground
+
+- HalfBath: Number of half bathrooms above ground
+
+- BedroomAbvGr: Number of bedrooms above ground
+
+- KitchensAbvGr: Number of kitchens above ground
+
+- FirePlaces: Number of fireplaces
+
+- YrBuilt: Original construction date
+
+- YrSold: Year house was sold
+
+
+
+
+
+list out all 79 variables from our dataset, we selected a few that we found particularly interesting and listed them below. That said, we are interested in starting out with models that include all available predictors and applying various shrinkage techniques.
+
+
+
 ## EDA
 
+
+#### Summary Statistics of Numeric Variables
 ```{r echo = F}
-# Notice that you don't see this code chunk when you knit, but the code still executes! This is what the echo = F statement in the code chunk header does: it runs the code, but doesn't display it in the knitted document.
-x <- 1+1
+# load data
+library(tidyverse)
+dat <- read_csv("data/train.csv")
+#Find numeric variables
+numeric_var <- names(dat)[which(sapply(dat, is.numeric))]
+
+#Find categorical variables
+categorical_var <- names(dat)[-which(sapply(dat, is.numeric))]
+
+#Numeric variables that we want to work with
+var <- numeric_var[-c(1:3,5:6,8:12,14:16,18:19,24, 26:27,29:33,35:36)]
+
+#Summary table for numeric variables
+dat[var] %>%
+  summarise_all(list(mean = mean, std = sd), na.rm = TRUE) %>%
+  pivot_longer(cols = everything(), 
+               names_to = c('col', '.value'), 
+               names_sep = '_')
 ```
 
-```{r Correlation}
+#### Closer Look at Sale Price
 
+The following code chunk takes a deeper look at the SalePrice feature:
+
+```{r}
+#Histogram of house prices
+dat %>%
+  ggplot(., aes(x = SalePrice)) +
+  geom_histogram()
+
+#Average house price over time
+dat %>%
+  group_by(YrSold) %>%
+  summarise(meanPrice = mean(SalePrice)) %>%
+  ggplot(., aes(x = YrSold, y = meanPrice)) +
+  geom_point() + geom_line()
 ```
+
+Judging from these two plots, the distribution of SalePrice in our training set is slightly right skewed. This suggests that there are some outlier properties with significantly higher sale prices.
+
+Also, the huge drop in average sale price of houses in our data coincides with the 2008 housing market crash. When predicting sale price it may be helpful to try to account for some of the macroeconomic factors at play, such as the general state of the housing market at a national level. This may be beyond the scope of our work, but definitely something worth addressing in our project limitations.
+
+
+#### Correlation between some of the numeric and discrete data fields (most importantly SalePrice):
+
+```{r}
+
+#Note that we are only using the training data here because it has actual values for SalePrice
+
+correlation <- dat %>%
+  select(SalePrice, PoolArea, LotArea, TotalBsmtSF, GarageArea, GrLivArea, FullBath, HalfBath, BedroomAbvGr, KitchenAbvGr, Fireplaces,YrSold, YearBuilt)
+
+corr_mtx <- cor(correlation, use = "pairwise.complete.obs")
+
+ggcorrplot(corr_mtx, # input the correlation matrix
+           hc.order = TRUE, 
+           type = "upper", 
+           lab = TRUE,
+           method = "circle", 
+           colors = c("tomato2", "white", "springgreen3"))
+```
+As seen from above, housing prices seem to be the most correlated (positively) with above ground living area (in sq. ft), total basement area(in sq. ft) and garage area (in sq. ft). The price is also moderately correlated with number of full bathrooms and year built.
+
 
 
 ### Data Cleaning
 
+As said earlier, of the 79 available variables, we will only be working with 17 variables--4 categorical, 6 continuous and 7 numeric--in this report. Thus, we will drop all other variables from out dataset.
+
 ```{r}
+#data with numerical variables of our choice
+numeric_dat<-dat[var]
+#data with numerical variables of our choice
+cat_var<-categorical_var[c(9,29,35,38)]
+categorical_dat<-dat[cat_var]
+#final data with the 17 variables variables of our choice
+final_dat <- cbind(numeric_dat,categorical_dat)
+```
 
-#Convert 'Alley' to binary
-dat$Alley <- ifelse(is.na(dat$Alley), 0, 1)
-
-#Get rid of Utilities variable
-dat %>%
-  group_by(Utilities) %>%
-  summarise(count = n())
-
-dat <- select(dat, -Utilities)
-
-#Dropping Condition2 variable
-dat %>%
-  group_by(Condition2) %>%
-  summarise(count = n())
-  
+In the dataset from Kaggle, PavedDrive is a categorical varible with three possible class: Y (if paved), P (if partially paved) and N(if dirt/gravel). We recode the variable so that PavedDrive is a binary variable that takes Y(Yes) if it is paved and N (No) otherwise.
+```{r}
+final_dat$PavedDrive <- ifelse((final_dat$PavedDrive=="Y"), "Y", "N")
 ```
 
 
 ## Methodology
 
+
+### Ridge Regression
+
+
+
+
+
+
+
 ## Results
+
+### Ridge Regression
+
+```{r}
+#create dummy variable for PavedDrive
+final_dat$PavedDrive <- ifelse((final_dat$PavedDrive=="Y"), 1, 0)
+#create dummy variable for CentralAir
+final_dat$CentralAir <- ifelse((final_dat$CentralAir=="Y"), 1, 0)
+# create dummy variables for all categorical variables
+dataf <- dummy_cols(final_dat,remove_first_dummy = TRUE)
+#drop the columns that stores categorical variable since thee same information 
+# is stored in the newly created dummy variables
+cat_name<-names(final_dat)[-which(sapply(final_dat, is.numeric))]
+dataf <-dataf[,!(names(dataf) %in% cat_name)]
+# for numeric variaables, the dataset has NA for 0. so replace NA with 0s.
+dataf[is.na(dataf)] = 0
+```
+
+```{r}
+library(glmnet)
+set.seed(10)
+x <- model.matrix(SalePrice ~ ., dataf)[,-1]
+y<-dataf$SalePrice
+n <- nrow(dataf)
+# create vector of indices for each set
+train_ids <- sample(1:n, .80*n)
+test_ids <- (1:n)[-train_ids]
+# create test and train set based on the indicators
+train_set<-dataf[train_ids,]
+test_set<-dataf[test_ids,]
+```
+
+```{r}
+set.seed(10)
+y_test<-y[test_ids]
+cv_out <- cv.glmnet(x[train_ids,], y[train_ids], alpha = 0, nfolds = 10)
+best_lam <- cv_out$lambda.min
+best_lam
+#find RMSE
+grid <- 10^seq(5,-2,length = 100)
+ridge_mod <- glmnet(x[train_ids,], y[train_ids], alpha = 0, lambda = grid)
+ridge_preds <- predict(ridge_mod, s= best_lam, newx = x[test_ids,])
+sqrt(mean((ridge_preds - y_test)^2))
+ridge_final <- glmnet(x, y, alpha = 0, lambda = best_lam)
+round(coef(ridge_final), 3)
+```
+
+### Lasso Regression
+
+```{r}
+set.seed(10)
+cv_out <- cv.glmnet(x[train_ids,], y[train_ids], alpha = 1, nfolds = 10)
+best_lam <- cv_out$lambda.min
+best_lam
+grid <- 10^seq(5,-2,length = 100)
+
+#coefficients
+lasso_mod <- glmnet(x[train_ids,], y[train_ids],alpha = 1, lambda = grid)
+lasso_coef <- predict(lasso_mod, type = "coefficients", s = best_lam)[1:18,]
+lasso_coef
+#RMSE
+sqrt(mean((predict(lasso_mod, s= best_lam, newx = x[test_ids,]) - y_test)^2))
+```
+
+
 
 ## Discussion
