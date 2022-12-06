@@ -192,13 +192,12 @@ final_dat$PavedDrive <- ifelse((final_dat$PavedDrive=="Y"), "Y", "N")
 
 ## Results
 
-### Ridge Regression
-
+###Linear Regression
 ```{r}
 #create dummy variable for PavedDrive
-final_dat$PavedDrive <- ifelse((final_dat$PavedDrive=="Y"), 1, 0)
+#final_dat$PavedDrive <- ifelse((final_dat$PavedDrive=="Y"), 1, 0)
 #create dummy variable for CentralAir
-final_dat$CentralAir <- ifelse((final_dat$CentralAir=="Y"), 1, 0)
+#final_dat$CentralAir <- ifelse((final_dat$CentralAir=="Y"), 1, 0)
 # create dummy variables for all categorical variables
 dataf <- dummy_cols(final_dat,remove_first_dummy = TRUE)
 #drop the columns that stores categorical variable since thee same information 
@@ -210,17 +209,30 @@ dataf[is.na(dataf)] = 0
 ```
 
 ```{r}
-library(glmnet)
-set.seed(10)
-x <- model.matrix(SalePrice ~ ., dataf)[,-1]
-y<-dataf$SalePrice
-n <- nrow(dataf)
+set.seed(1)
 # create vector of indices for each set
 train_ids <- sample(1:n, .80*n)
 test_ids <- (1:n)[-train_ids]
 # create test and train set based on the indicators
 train_set<-dataf[train_ids,]
 test_set<-dataf[test_ids,]
+model<-lm(SalePrice ~ ., train_set)
+preds <- predict(model, test_set)
+sqrt(mean((test_set$SalePrice-preds)^2))
+coef(model)
+```
+
+
+### Ridge Regression
+
+
+```{r}
+library(glmnet)
+x <- model.matrix(SalePrice ~ ., dataf)[,-1]
+y<-dataf$SalePrice
+n <- nrow(dataf)
+
+
 ```
 
 ```{r}
@@ -241,7 +253,7 @@ round(coef(ridge_final), 3)
 ### Lasso Regression
 
 ```{r}
-set.seed(10)
+
 cv_out <- cv.glmnet(x[train_ids,], y[train_ids], alpha = 1, nfolds = 10)
 best_lam <- cv_out$lambda.min
 best_lam
@@ -255,6 +267,81 @@ lasso_coef
 sqrt(mean((predict(lasso_mod, s= best_lam, newx = x[test_ids,]) - y_test)^2))
 ```
 
+#Naive Bayes
+
+```{r}
+library(e1071)
+final_dat$GarageFinish[is.na(final_dat$GarageFinish)] <- "NoGrg"
+train_set<-final_dat[train_ids,]
+test_set<-final_dat[test_ids,]
+# Fitting Naive Bayes Model
+# to training dataset
+set.seed(120)  # Setting Seed
+classifier_cl <- naiveBayes(Neighborhood ~ .-YearBuilt,train_set)
+#classifier_cl
+ 
+# Predicting on test data'
+y_pred <- predict(classifier_cl, newdata = test_set)
+ 
+# Confusion Matrix
+cm <- table(test_set$Neighborhood, y_pred)
+ 
+# Model Evaluation
+mean(test_set$Neighborhood != y_pred)
+```
+
+#KNN
+```{r}
+library(class)
+knn_dat<-final_dat%>%
+  mutate(CentralAir=ifelse(final_dat$CentralAir=="Y", 1, 0),
+         PavedDrive=ifelse(final_dat$PavedDrive=="Y", 1, 0))
+#final_dat$CentralAir <- ifelse(final_dat$CentralAir=="Y", 1, 0)
+#final_dat$PavedDrive <- ifelse(final_dat$PavedDrive=="Y", 1, 0)
+knn_dat_scale <- knn_dat %>%
+  mutate_if(is.numeric, scale)%>%
+  select(-GarageFinish)
+train_set<-knn_dat_scale[train_ids,]
+test_set<-knn_dat_scale[test_ids,]
+
+knn_preds <- knn(train = train_set%>%dplyr::select(-Neighborhood),,
+                 test = test_set%>% dplyr::select(-Neighborhood),,
+                 cl =train_set$Neighborhood, 
+                 k = 10)
+#table(pred = knn_preds, truth = test_set$Neighborhood)
+mean(test_set$Neighborhood != knn_preds)
+```
 
 
+###Tree
+```{r}
+#final_dat$GarageFinish[final_dat$GarageFinish == 'NA'] <- 'NoGrg'
+final_dat$GarageFinish[is.na(final_dat$GarageFinish)] <- "NoGrg"
+#final_dat$CentralAir <- ifelse(final_dat$CentralAir=="Y", 1, 0)
+#final_dat$PavedDrive <- ifelse(final_dat$PavedDrive=="Y", 1, 0)
+```
+
+
+```{r}
+library(tree)
+final_dat$GarageFinish<-as.factor(final_dat$GarageFinish)
+final_dat$CentralAir<-as.factor(final_dat$CentralAir)
+final_dat$PavedDrive<-as.factor(final_dat$PavedDrive)
+final_dat$Neighborhood<-as.factor(final_dat$Neighborhood)
+#final_dat$YearBuilt<-as.factor(final_dat$YearBuilt)
+
+train_set<-final_dat[train_ids,]
+test_set<-final_dat[test_ids,]
+tree_penguin<-tree(Neighborhood ~ .-YearBuilt,train_set)
+summary(tree_penguin)
+plot(tree_penguin)
+text(tree_penguin,pretty=0,cex=.5)
+
+```
+```{r}
+dat %>%
+ group_by(Neighborhood) %>%
+summarise(count = n())%>%
+  arrange(count)
+```
 ## Discussion
