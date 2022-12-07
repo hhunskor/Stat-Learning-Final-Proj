@@ -3,7 +3,7 @@ title: "Math 218: Final Report"
 subtitle: "Project Haydoja"
 author: "Payoja and Hayden"
 output: pdf_document
-date: "?"
+date: "Dec 6"
 editor_options: 
   chunk_output_type: inline
 ---
@@ -23,22 +23,22 @@ lapply(dat,class)
 
 ## Introduction
 
-For our final project, we decided to look at the Ames Housing dataset, which includes extensive information on the sale of residential properties in Ames, Iowa from 2006 to 2010. It contains 1460 observations with 79 variables on various house specifications. The variables are a mix of continuous, categorical and discrete types. The data is publicly available on Kaggle - below is a link to the dataset itself which includes a description of all the data fields:
+There is a plethora of statistical tools available to understand any given set of data. Statisticians often use either supervised or unsupervised statistical learning methods to examine the data and build models to try and perform inference and perform inference and make predictions. For the purpose of our project, however, we decided to focus on supervised learning mainly for two reasons. First, the objective is clearly defined in supervised learning as there is a a response variable guiding the analysis. Second, it is easier to assess the performance of  models, for example by determining missclassification rate (for classification problem) or root mean squared error(for prediction problem), in supervised learning.
 
-https://www.kaggle.com/competitions/house-prices-advanced-regression-techniques/data
+To conduct the supervised learning of data, we decided to look at the Ames Housing dataset, which includes extensive information on the sale of residential properties in Ames, Iowa from 2006 to 2010. It contains 1460 observations with 79 variables on various house specifications. The variables are a mix of continuous, categorical and discrete types. The data is publicly available on [Kaggle](https://www.kaggle.com/competitions/house-prices-advanced-regression-techniques/data). 
 
-The goal of our project is to implement as many of the modeling techniques we've covered in this course as possible. To do so, we decided to focus on two modeling problems: one regression and one classification.
 
-Below are our research questions:
+In our project, we will work with both regression and classification problems and our primary goal is to understand which statistical learning method performs better for the Ames housing dataset. Below are our research questions:
 
-1. Which modeling technique most accurately predicts housing prices using the other available housing features?
+1. Which statistical learning method most accurately predicts housing prices using other available housing features?
 
-2. Which modeling technique most accurately classifies houses by neighborhood based on the other available housing features?
+2. Which  statistical learning method most accurately classifies houses by neighborhood based on the other available housing features?
 
+Although, our primary goal is to understand which statistical learning method performs better, we will also spend some time exploring and understanding which predictors affect our response variables and how.
 
 ### Data Description
 
-Rather than use all 79 variables from the dataset for our analysis, we decided to select a few that we found particularly interesting. The variables that we have decided to use in this report is listed below.
+Rather than use all 79 variables from the dataset for our analysis, we decided to select 17 variables--4 categorical, 6 continuous and 7 numeric--in this report that we found particularly interesting. The variables that we have decided to use in this report is listed below.
 
 ##### Categorical Variable:
 
@@ -47,7 +47,7 @@ Rather than use all 79 variables from the dataset for our analysis, we decided t
 
 - CentralAir: Central air conditioning (Yes/No)
 
-- PavedDrive: Paved driveway
+- PavedDrive: Paved driveway (Yes/No)
 
 - GarageFinish: Interior finish of the garage
 
@@ -82,32 +82,36 @@ Rather than use all 79 variables from the dataset for our analysis, we decided t
 - YrSold: Year house was sold
 
 
+```{r}
+# load data
+library(tidyverse)
+dat <- read_csv("data/train.csv")
+#Find numeric variables
+numeric_var <- names(dat)[which(sapply(dat, is.numeric))]
+#Find categorical variables
+categorical_var <- names(dat)[-which(sapply(dat, is.numeric))]
+#Numeric variables that we want to work with
+var <- numeric_var[-c(1:3,5:6,8:12,14:16,18:19,24, 26:27,29:33,35:36)]
 
-
-
-list out all 79 variables from our dataset, we selected a few that we found particularly interesting and listed them below. That said, we are interested in starting out with models that include all available predictors and applying various shrinkage techniques.
-
-
+#drop all other variables from out dataset that we don't need.
+#data with numerical variables of our choice
+numeric_dat<-dat[var]
+#data with categorical variables of our choice
+cat_var<-categorical_var[c(9,29,35,38)]
+categorical_dat<-dat[cat_var]
+#final data with the 17 variables variables of our choice
+final_dat <- cbind(numeric_dat,categorical_dat)
+#In the dataset from Kaggle, PavedDrive is a categorical varible with three possible class: Y (if paved), P (if partially paved) and N(if dirt/gravel). We recode the variable so that PavedDrive is a binary variable that takes Y(Yes) if it is paved and N (No) otherwise.
+final_dat$PavedDrive <- ifelse((final_dat$PavedDrive=="Y"), "Y", "N")
+```
 
 ## EDA
 
 
 #### Summary Statistics of Numeric Variables
 ```{r echo = F}
-# load data
-library(tidyverse)
-dat <- read_csv("data/train.csv")
-#Find numeric variables
-numeric_var <- names(dat)[which(sapply(dat, is.numeric))]
-
-#Find categorical variables
-categorical_var <- names(dat)[-which(sapply(dat, is.numeric))]
-
-#Numeric variables that we want to work with
-var <- numeric_var[-c(1:3,5:6,8:12,14:16,18:19,24, 26:27,29:33,35:36)]
-
 #Summary table for numeric variables
-dat[var] %>%
+numeric_dat %>%
   summarise_all(list(mean = mean, std = sd), na.rm = TRUE) %>%
   pivot_longer(cols = everything(), 
                names_to = c('col', '.value'), 
@@ -116,34 +120,32 @@ dat[var] %>%
 
 #### Closer Look at Sale Price
 
-The following code chunk takes a deeper look at the SalePrice feature:
-
 ```{r}
+#The following code chunk takes a deeper look at the SalePrice feature:
+
 #Histogram of house prices
-dat %>%
+final_dat  %>%
   ggplot(., aes(x = SalePrice)) +
   geom_histogram()
 
 #Average house price over time
-dat %>%
+final_dat  %>%
   group_by(YrSold) %>%
   summarise(meanPrice = mean(SalePrice)) %>%
   ggplot(., aes(x = YrSold, y = meanPrice)) +
   geom_point() + geom_line()
 ```
 
-Judging from these two plots, the distribution of SalePrice in our training set is slightly right skewed. This suggests that there are some outlier properties with significantly higher sale prices.
+Judging from the histogram, the distribution of SalePrice in our data set is slightly right skewed. This suggests that there are some outlier properties with significantly higher sale prices.
 
-Also, the huge drop in average sale price of houses in our data coincides with the 2008 housing market crash. When predicting sale price it may be helpful to try to account for some of the macroeconomic factors at play, such as the general state of the housing market at a national level. This may be beyond the scope of our work, but definitely something worth addressing in our project limitations.
+From the second plot,we can observe a  huge drop in average sale price of houses in our data. This coincides with the 2008 housing market crash, which suggests that there are some of the macroeconomic factors at play, such as the general state of the housing market at a national level. We could investigate the effect of 2008 housing market crash on housing sale prices by treating 'YrSold' as a categorical variable; however, for this project we choose not to do it and instead treat 'YrSold'as a numerical variable. This decision was based on our preference to work mostly with numeric variables, since statistical learning methods such as lasso regression and KNN classification, doesn't handle categorical variables well and the interpretation might get tricky. Having said that, the role of macroeconomic factors in determining sale price is worth addressing in our project limitations.
 
 
 #### Correlation between some of the numeric and discrete data fields (most importantly SalePrice):
 
 ```{r}
 
-#Note that we are only using the training data here because it has actual values for SalePrice
-
-correlation <- dat %>%
+correlation <- final_dat  %>%
   select(SalePrice, PoolArea, LotArea, TotalBsmtSF, GarageArea, GrLivArea, FullBath, HalfBath, BedroomAbvGr, KitchenAbvGr, Fireplaces,YrSold, YearBuilt)
 
 corr_mtx <- cor(correlation, use = "pairwise.complete.obs")
@@ -158,25 +160,17 @@ ggcorrplot(corr_mtx, # input the correlation matrix
 As seen from above, housing prices seem to be the most correlated (positively) with above ground living area (in sq. ft), total basement area(in sq. ft) and garage area (in sq. ft). The price is also moderately correlated with number of full bathrooms and year built.
 
 
-
-### Data Cleaning
-
-As said earlier, of the 79 available variables, we will only be working with 17 variables--4 categorical, 6 continuous and 7 numeric--in this report. Thus, we will drop all other variables from out dataset.
+#### Number of houses in different Neighborhoods:
 
 ```{r}
-#data with numerical variables of our choice
-numeric_dat<-dat[var]
-#data with numerical variables of our choice
-cat_var<-categorical_var[c(9,29,35,38)]
-categorical_dat<-dat[cat_var]
-#final data with the 17 variables variables of our choice
-final_dat <- cbind(numeric_dat,categorical_dat)
+final_dat  %>%
+  count(Neighborhood) %>%
+  ggplot(aes(x = n, y = reorder(Neighborhood, n))) +
+    geom_bar(stat = "identity")+
+  labs(title = "Number of houses in each Neighborhood")
 ```
+As seen from the plot, most houses in our dataset are located in NAmes, followed by CollegeCr and Old Town. Less than 50 houses are located in Mitchel, NoRidge, timber, IDOTRR,ClearCr,SWISU,StoneBr,MeadowV, Blmngtn, BrDale,Veenker, NPkVill and Blueste. This is something we will take into consideration when designing our regression and classification model.
 
-In the dataset from Kaggle, PavedDrive is a categorical varible with three possible class: Y (if paved), P (if partially paved) and N(if dirt/gravel). We recode the variable so that PavedDrive is a binary variable that takes Y(Yes) if it is paved and N (No) otherwise.
-```{r}
-final_dat$PavedDrive <- ifelse((final_dat$PavedDrive=="Y"), "Y", "N")
-```
 
 
 ## Methodology
@@ -194,15 +188,20 @@ final_dat$PavedDrive <- ifelse((final_dat$PavedDrive=="Y"), "Y", "N")
 
 ###Linear Regression
 ```{r}
-#create dummy variable for PavedDrive
-#final_dat$PavedDrive <- ifelse((final_dat$PavedDrive=="Y"), 1, 0)
-#create dummy variable for CentralAir
-#final_dat$CentralAir <- ifelse((final_dat$CentralAir=="Y"), 1, 0)
+#drop neighborhoods that had less than 50 houses
+dataf<-final_dat[final_dat$Neighborhood != "Mitchel" & final_dat$Neighborhood != "NoRidge"
+           & final_dat$Neighborhood != "Timber" & final_dat$Neighborhood != "IDOTRR"
+           & final_dat$Neighborhood != "ClearCr" & final_dat$Neighborhood != "SWISU"
+          & final_dat$Neighborhood != "StoneBr" & final_dat$Neighborhood != "MeadowV"
+          & final_dat$Neighborhood != "Blmngtn" & final_dat$Neighborhood != "BrDale"
+           & final_dat$Neighborhood != "Veenker" & final_dat$Neighborhood != "NPkVill"
+          & final_dat$Neighborhood != "Blueste" , ] 
+
 # create dummy variables for all categorical variables
-dataf <- dummy_cols(final_dat,remove_first_dummy = TRUE)
+dataf <- dummy_cols(dataf,remove_first_dummy = TRUE)
 #drop the columns that stores categorical variable since thee same information 
 # is stored in the newly created dummy variables
-cat_name<-names(final_dat)[-which(sapply(final_dat, is.numeric))]
+cat_name<-names(dataf)[-which(sapply(dataf, is.numeric))]
 dataf <-dataf[,!(names(dataf) %in% cat_name)]
 # for numeric variaables, the dataset has NA for 0. so replace NA with 0s.
 dataf[is.na(dataf)] = 0
@@ -210,6 +209,7 @@ dataf[is.na(dataf)] = 0
 
 ```{r}
 set.seed(1)
+n<-nrow(dataf)
 # create vector of indices for each set
 train_ids <- sample(1:n, .80*n)
 test_ids <- (1:n)[-train_ids]
@@ -221,18 +221,32 @@ preds <- predict(model, test_set)
 sqrt(mean((test_set$SalePrice-preds)^2))
 coef(model)
 ```
+Based on the output of the regression model, the 5 variables that seems to affect the sale price of the houses are 
+KitchenAbvGr, Fireplace, Neighborhood_NridgHt (a dummy that indicates whether house is in 'NridgHt' neighborhood),
+Neighborhood_Crawfor (a dummy that indicates whether house is in 'Crawfor' neighborhood and Neighborhood_Edwards (a dummy that indicates whether house is in 'Edwards' neighborhood.
 
+**Interpretation of 5 coefficients highest in magnitude**
+
+- Coefficient on KitchenAbvGr: Controlling for the  variables,including, but not limited to, lot area, garage finish type, central air conditionaing and neighborhood, an increase in number of kitchen by 1 decreases the saleprice by $33924.08 .
+
+-Coefficient on Fireplace: Controlling for the  variables,including, but not limited to, lot area, garage finish type, central air conditionaing and neighborhood, a unit increase in number of fireplaces increases the saleprice by $10022.39.
+
+-Coefficient on Neighborhood_NridgH: Controlling for the  variables,including, but not limited to, lot area, garage finish type, central and air conditioning, a house in NridgH neighborhood is pricier by $76357.29 compared to a house in BrkSide Neighborhood.
+
+-Coefficient on Neighborhood_Crawfor: Controlling for the  variables,including, but not limited to, lot area, garage finish type, central and air conditioning, a house in Crawfor neighborhood is pricier by $27039.75 compared to a house in BrkSide Neighborhood.
+
+- Coefficient on Neighborhood_Edwards: Controlling for the  variables,including, but not limited to, lot area, garage finish type, central and air conditioning, a house in Edwards neighborhood is cheaper by $16307.46 compared to a house in BrkSide Neighborhood.
+
+
+The RMSE error is 28837.11. This implies that the prediction of houses in the test set is,on average, off by $28837.11. This error seems small given that the the sale peice of the houses are in millions of dollar.
 
 ### Ridge Regression
-
 
 ```{r}
 library(glmnet)
 x <- model.matrix(SalePrice ~ ., dataf)[,-1]
 y<-dataf$SalePrice
 n <- nrow(dataf)
-
-
 ```
 
 ```{r}
@@ -240,7 +254,6 @@ set.seed(10)
 y_test<-y[test_ids]
 cv_out <- cv.glmnet(x[train_ids,], y[train_ids], alpha = 0, nfolds = 10)
 best_lam <- cv_out$lambda.min
-best_lam
 #find RMSE
 grid <- 10^seq(5,-2,length = 100)
 ridge_mod <- glmnet(x[train_ids,], y[train_ids], alpha = 0, lambda = grid)
@@ -249,6 +262,25 @@ sqrt(mean((ridge_preds - y_test)^2))
 ridge_final <- glmnet(x, y, alpha = 0, lambda = best_lam)
 round(coef(ridge_final), 3)
 ```
+Based on the output of the regression model, the 5 variables that seems to affect the sale price of the houses are 
+KitchenAbvGr, Neighborhood_Somerst(a dummy that indicates whether house is in 'Somerst' neighborhood)  , Neighborhood_NridgHt (a dummy that indicates whether house is in 'NridgHt' neighborhood),Neighborhood_Crawfor (a dummy that indicates whether house is in 'Crawfor' neighborhood and Neighborhood_Edwards (a dummy that indicates whether house is in 'Edwards' neighborhood.
+
+**Interpretation of 5 coefficients highest in magnitude**
+
+- Coefficient on KitchenAbvGr: Controlling for the  variables,including, but not limited to, lot area, garage finish type, central air conditionaing and neighborhood, an increase in number of kitchen by 1 decreases the saleprice by $23577.447 .
+
+-Coefficient on Neighborhood_NridgH: Controlling for the  variables,including, but not limited to, lot area, garage finish type, central and air conditionaing, a house in NridgH neighborhood is pricier by $58767.440 compared to a house in BrkSide Neighborhood.
+
+-Coefficient on Neighborhood_Crawfor: Controlling for the  variables,including, but not limited to, lot area, garage finish type, central and air conditioning, a house in Crawfor neighborhood is pricier by $ 22619.590 compared to a house in BrkSide Neighborhood.
+
+- Coefficient on Neighborhood_Edwards: Controlling for the  variables,including, but not limited to, lot area, garage finish type, central and air conditioning, a house in Edwards neighborhood is cheaper by $16307.46 compared to a house in BrkSide Neighborhood.
+
+ - Coefficient on Neighborhood_Somerst: Controlling for the  variables,including, but not limited to, lot area, garage finish type, central and air conditioning, a house in Somerst neighborhood is cheaper by $15562.545 compared to a house in BrkSide Neighborhood.
+
+
+The RMSE error is 29680.6. This implies that the prediction of houses in the test set is,on average, off by $29680.6. This error seems small given that the the sale peice of the houses are in millions of dollar.
+
+
 
 ### Lasso Regression
 
@@ -256,28 +288,63 @@ round(coef(ridge_final), 3)
 
 cv_out <- cv.glmnet(x[train_ids,], y[train_ids], alpha = 1, nfolds = 10)
 best_lam <- cv_out$lambda.min
-best_lam
 grid <- 10^seq(5,-2,length = 100)
 
 #coefficients
 lasso_mod <- glmnet(x[train_ids,], y[train_ids],alpha = 1, lambda = grid)
-lasso_coef <- predict(lasso_mod, type = "coefficients", s = best_lam)[1:18,]
+lasso_coef <- predict(lasso_mod, type = "coefficients", s = best_lam)#[1:18,]
 lasso_coef
 #RMSE
 sqrt(mean((predict(lasso_mod, s= best_lam, newx = x[test_ids,]) - y_test)^2))
 ```
+Based on the output, the lasso model sclaed the coefficients on LotArea,HalfBath, BedRoomAbvGr, Neighborhood_Gilbert, Neighborhood_NWAmes, GarageFinish_NA and PavedDrive_Y to 0. The interpretation of the coefficients of Neighborhood_Gilbert, Neighborhood_NWAmes, GarageFinish_NA scaled to 0 is a bit trickier  since neighborhood and GarageFinish were categorical variables with multiple classes but only coefficients of certain classes were scaled to 0. It is hard to tell whether this implies neighborhood and garage finish are not important covariates or only certain classes of these categorical variables are important when predicting for saleprice.
 
-#Naive Bayes
+Similar to Ridge Regressionl, the 5 variables that seems to affect the sale price of the houses the most in the Lasso model are KitchenAbvGr, Neighborhood_Somerst(a dummy that indicates whether house is in 'Somerst' neighborhood)  , Neighborhood_NridgHt (a dummy that indicates whether house is in 'NridgHt' neighborhood),Neighborhood_Crawfor (a dummy that indicates whether house is in 'Crawfor' neighborhood and Neighborhood_Edwards (a dummy that indicates whether house is in 'Edwards' neighborhood. The interpretation is similar to that of ridge regression.
+
+The RMSE error is 28752.86. This implies that the prediction of houses in the test set is,on average, off by $29680.6. This error seems small given that the the sale price of the houses are in millions of dollar.
+
+#KNN
+```{r}
+library(class)
+classification_dat<-final_dat[final_dat$Neighborhood != "Mitchel" & final_dat$Neighborhood != "NoRidge"
+           & final_dat$Neighborhood != "Timber" & final_dat$Neighborhood != "IDOTRR"
+           & final_dat$Neighborhood != "ClearCr" & final_dat$Neighborhood != "SWISU"
+          & final_dat$Neighborhood != "StoneBr" & final_dat$Neighborhood != "MeadowV"
+          & final_dat$Neighborhood != "Blmngtn" & final_dat$Neighborhood != "BrDale"
+           & final_dat$Neighborhood != "Veenker" & final_dat$Neighborhood != "NPkVill"
+          & final_dat$Neighborhood != "Blueste" , ] 
+classification_dat<-final_dat%>%
+  mutate(CentralAir=ifelse(final_dat$CentralAir=="Y", 1, 0),
+         PavedDrive=ifelse(final_dat$PavedDrive=="Y", 1, 0))%>%
+  select(-GarageFinish)
+
+classification_dat_scale<- classification_dat %>%
+  mutate_if(is.numeric, scale)
+```
 
 ```{r}
+train_set<-classification_dat_scale[train_ids,]
+test_set<-classification_dat_scale[test_ids,]
+
+knn_preds <- knn(train = train_set%>%dplyr::select(-Neighborhood),,
+                 test = test_set%>% dplyr::select(-Neighborhood),,
+                 cl =train_set$Neighborhood, 
+                 k = 10)
+#table(pred = knn_preds, truth = test_set$Neighborhood)
+mean(test_set$Neighborhood != knn_preds)
+```
+
+
+#Naive Bayes
+```{r}
 library(e1071)
-final_dat$GarageFinish[is.na(final_dat$GarageFinish)] <- "NoGrg"
-train_set<-final_dat[train_ids,]
-test_set<-final_dat[test_ids,]
+#final_dat$GarageFinish[is.na(final_dat$GarageFinish)] <- "NoGrg"
+#train_set<-final_dat[train_ids,]
+#test_set<-final_dat[test_ids,]
 # Fitting Naive Bayes Model
-# to training dataset
-set.seed(120)  # Setting Seed
-classifier_cl <- naiveBayes(Neighborhood ~ .-YearBuilt,train_set)
+set.seed(12)  # Setting Seed
+
+classifier_cl <- naiveBayes(Neighborhood ~ .,train_set)
 #classifier_cl
  
 # Predicting on test data'
@@ -290,33 +357,13 @@ cm <- table(test_set$Neighborhood, y_pred)
 mean(test_set$Neighborhood != y_pred)
 ```
 
-#KNN
-```{r}
-library(class)
-knn_dat<-final_dat%>%
-  mutate(CentralAir=ifelse(final_dat$CentralAir=="Y", 1, 0),
-         PavedDrive=ifelse(final_dat$PavedDrive=="Y", 1, 0))
-#final_dat$CentralAir <- ifelse(final_dat$CentralAir=="Y", 1, 0)
-#final_dat$PavedDrive <- ifelse(final_dat$PavedDrive=="Y", 1, 0)
-knn_dat_scale <- knn_dat %>%
-  mutate_if(is.numeric, scale)%>%
-  select(-GarageFinish)
-train_set<-knn_dat_scale[train_ids,]
-test_set<-knn_dat_scale[test_ids,]
 
-knn_preds <- knn(train = train_set%>%dplyr::select(-Neighborhood),,
-                 test = test_set%>% dplyr::select(-Neighborhood),,
-                 cl =train_set$Neighborhood, 
-                 k = 10)
-#table(pred = knn_preds, truth = test_set$Neighborhood)
-mean(test_set$Neighborhood != knn_preds)
-```
 
 
 ###Tree
 ```{r}
 #final_dat$GarageFinish[final_dat$GarageFinish == 'NA'] <- 'NoGrg'
-final_dat$GarageFinish[is.na(final_dat$GarageFinish)] <- "NoGrg"
+#final_dat$GarageFinish[is.na(final_dat$GarageFinish)] <- "NoGrg"
 #final_dat$CentralAir <- ifelse(final_dat$CentralAir=="Y", 1, 0)
 #final_dat$PavedDrive <- ifelse(final_dat$PavedDrive=="Y", 1, 0)
 ```
@@ -324,22 +371,24 @@ final_dat$GarageFinish[is.na(final_dat$GarageFinish)] <- "NoGrg"
 
 ```{r}
 library(tree)
-final_dat <- final_dat %>%
-  mutate_if(is.character, factor)
+classification_dat_scale <- classification_dat_scale %>%
+ mutate_if(is.character, factor)
+train_set<-classification_dat_scale[train_ids,]
+test_set<-classification_dat_scale[test_ids,]
 #final_dat$GarageFinish<-as.factor(final_dat$GarageFinish)
 #final_dat$CentralAir<-as.factor(final_dat$CentralAir)
 #final_dat$PavedDrive<-as.factor(final_dat$PavedDrive)
 #final_dat$Neighborhood<-as.factor(final_dat$Neighborhood)
 #final_dat$YearBuilt<-as.factor(final_dat$YearBuilt)
 
-train_set<-final_dat[train_ids,]
-test_set<-final_dat[test_ids,]
-tree_penguin<-tree(Neighborhood ~ .-GarageFinish,train_set)
-summary(tree_penguin)
-plot(tree_penguin)
-text(tree_penguin,pretty=0,cex=.5)
-tree_preds <- predict(tree_penguin, test_set, type = "class")
-mean(test_set$Neighborhood != tree_preds)
+#train_set<-final_dat[train_ids,]
+#test_set<-final_dat[test_ids,]
+tree_house<-tree(Neighborhood ~ .,train_set)
+summary(tree_house)
+plot(tree_house)
+text(tree_house,pretty=0,cex=.5)
+#tree_preds <- predict(tree_house, test_set, type = "class")
+#mean(test_set$Neighborhood != tree_preds)
 
 ```
 ```{r}
