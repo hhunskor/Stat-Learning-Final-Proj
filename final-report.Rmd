@@ -5,7 +5,7 @@ author: "Payoja and Hayden"
 output: pdf_document
 date: "Dec 6"
 editor_options: 
-chunk_output_type: inline
+  chunk_output_type: inline
 ---
 
 ```{r packages-data, include = F}
@@ -15,37 +15,33 @@ library(dplyr)
 library(tidyr)
 library(ggcorrplot)
 dat <- read_csv("data/train.csv")
-```
-
-```{r}
-#Not sure if we need to include this output in the report just because it will take up a ton of space
 summary(dat)
 lapply(dat,class)
+
 ```
+
 
 ## Introduction
 
-There is a plethora of statistical tools available to understand any given set of data. Data scientists and statisticians often use either supervised or unsupervised statistical learning methods to model their data to both better understand trends and extrapolate predictions. For the our project, however, we decided to exclusively focus on supervised learning, mainly for two reasons. First, supervised learning methods are always guided by a response variable which ensures our research objective is clearly defined. Second, supervised learning models have relevant performance metrics (i.e. RMSE for regression problems or misclass. rate for classification problems).
+There is a plethora of statistical tools available to understand any given set of data. Statisticians often use either supervised or unsupervised statistical learning methods to examine the data and build models to try and perform inference and perform inference and make predictions. For the purpose of our project, however, we decided to focus on supervised learning mainly for two reasons. First, the objective is clearly defined in supervised learning as there is a a response variable guiding the analysis. Second, it is easier to assess the performance of  models, for example by determining missclassification rate (for classification problem) or root mean squared error(for prediction problem), in supervised learning.
 
-For this project, we decided to implement a variety of supervised learning techniques using the Ames Housing dataset, which is a publicly available dataset that includes extensive information on the sale of residential properties in Ames, Iowa from 2006 to 2010. It contains 1460 observations with 79 variables on various house specifications. The variables are a mix of continuous, categorical and discrete types.
+To conduct the supervised learning of data, we decided to look at the Ames Housing dataset, which includes extensive information on the sale of residential properties in Ames, Iowa from 2006 to 2010. It contains 1460 observations with 79 variables on various house specifications. The variables are a mix of continuous, categorical and discrete types. The data is publicly available on [Kaggle](https://www.kaggle.com/competitions/house-prices-advanced-regression-techniques/data). 
 
-The data is available on [Kaggle](https://www.kaggle.com/competitions/house-prices-advanced-regression-techniques/data). 
 
-We will investigate both regression and classification problems, with the primary goal of better understanding which statistical learning method perform best on different features from the Ames housing dataset. Below are our driving research questions:
+In our project, we will work with both regression and classification problems and our primary goal is to understand which statistical learning method performs better for the Ames housing dataset. Below are our research questions:
 
 1. Which statistical learning method most accurately predicts housing prices using other available housing features?
 
 2. Which  statistical learning method most accurately classifies houses by neighborhood based on the other available housing features?
 
-Although, our primary goal is to identify which statistical learning method performs best, we will also spend some time exploring and understanding which predictors affect our response variables and how.
+Although, our primary goal is to understand which statistical learning method performs better, we will also spend some time exploring and understanding which predictors affect our response variables and how.
 
 ### Data Description
 
-Rather than use all 79 variables from the dataset for our analysis, we decided to select 17 variables that we found particularly interesting -- 4 categorical, 6 continuous and 7 numeric. 
+Rather than use all 79 variables from the dataset for our analysis, we decided to select 23 variables--7 categorical, 6 continuous and 10 numeric--in this report that we found particularly interesting. The variables that we have decided to use in this report is listed below.
 
-Below is a brief description of the variables that we have decided to use:
+##### Categorical Variable:
 
-##### Categorical Variables:
 
 - Neighborhood: Physical locations within Ames city limits
 
@@ -54,6 +50,14 @@ Below is a brief description of the variables that we have decided to use:
 - PavedDrive: Paved driveway (Yes/No)
 
 - GarageFinish: Interior finish of the garage
+
+- BldgType: Type of dwelling
+
+- HouseStyle: Style of dwelling
+
+- BsmtFinType1: Rating of basement finished area
+
+
 
 ##### Continuous Variable:
 
@@ -65,7 +69,7 @@ Below is a brief description of the variables that we have decided to use:
 
 - TotalBsmtSF: Total square feet of basement area
 
-- Garage Area: Size of garage in square feet
+- Garage Area :Size of garage in square feet
 
 - GrLivArea: Above ground living area square feet
 
@@ -81,37 +85,42 @@ Below is a brief description of the variables that we have decided to use:
 
 - FirePlaces: Number of fireplaces
 
+- OverallQual: Rates the overall material and finish of the house
+
+- OverallCond: Rates the overall condition of the house
+
 - YrBuilt: Original construction date
+
+- YearRemodAdd: Year house was remodelled
 
 - YrSold: Year house was sold
 
-## Data Cleaning
 
 ```{r}
+# load data
+library(tidyverse)
+dat <- read_csv("data/train.csv")
 #Find numeric variables
 numeric_var <- names(dat)[which(sapply(dat, is.numeric))]
-
 #Find categorical variables
 categorical_var <- names(dat)[-which(sapply(dat, is.numeric))]
-
 #Numeric variables that we want to work with
-var <- numeric_var[-c(1:3,5:6,8:12,14:16,18:19,24,26:27,29:33,35:36)]
+var <- numeric_var[-c(1:3,9:12,14:16,18:19,24, 26:27,29:33,35:36)]
 
 #drop all other variables from out dataset that we don't need.
+#data with numerical variables of our choice
 numeric_dat<-dat[var]
-
 #data with categorical variables of our choice
-cat_var<-categorical_var[c(9,29,35,38)]
+cat_var<-categorical_var[c(9,12:13,25,29,35,38)]
 categorical_dat<-dat[cat_var]
-
 #final data with the 17 variables variables of our choice
 final_dat <- cbind(numeric_dat,categorical_dat)
-
 #In the dataset from Kaggle, PavedDrive is a categorical varible with three possible class: Y (if paved), P (if partially paved) and N(if dirt/gravel). We recode the variable so that PavedDrive is a binary variable that takes Y(Yes) if it is paved and N (No) otherwise.
 final_dat$PavedDrive <- ifelse((final_dat$PavedDrive=="Y"), "Y", "N")
 ```
 
 ## EDA
+
 
 #### Summary Statistics of Numeric Variables
 ```{r echo = F}
@@ -180,18 +189,36 @@ As seen from the plot, most houses in our dataset are located in NAmes, followed
 
 ## Methodology
 
+To answer our first research question relating to the regression problem, "Which statistical learning method most accurately predicts housing prices using other available housing features?", we decided to use three different regression models: Linear Regression, Ridge Regression and Lasso Regression. For each of the these three methods we divide our data into two sets 'train' and 'test'. The 'train' set contains 80% of our entire data where as the 'test' set contains the remaining 20%. The train and the test set are the same for all three regressions. The response variable is SalePrice and the predictors are all the other 22 variables listed in the data description section.A brief description on each of these methods is below.
 
-### Ridge Regression
+**1. Linear Regression**
+Our linear model will include both numeric and categorical variable. For categorical variables, we create dummy variables using the 'fastDummies' package. To validate the performance of our model, we  predict the sale price of houses in the test set using the lasso model fit on the training set. Then, we will examine the test error rate by measuring the root mean squares error. 
+
+**2. Ridge Regression**
+We implement the ridge regression to examine whether shrinking features that are not as important in determining sales price improves the performance of the model. For categorical variables, we create dummy variables. Using the 22 predictors,we fit the ridge model on the training set,with  with $\lambda$ chosen by cross-validation with k-fold equals 10. To validate the performance of our model, we  predict the sale price of houses in the test set using the lasso model fit on the training set. Then, we will examine the test error rate by measuring the root mean squares error. The R package required to implement this method is 'glmnet'.
+
+**3. Lasso Regresison**
+22 predictors, although better than having too few predictors, may be too many to use for this research question. Thus, we want to implement the lasso method so that coefficients of features that are not as important shrinks to 0. For categorical variables, we create dummy variables. We realize that interpreting this might be tricky as only coefficient on some of the classes might be shrunk to 0, but we believe features such as neighborhood are important in determining the sale price. Thus, we chose to create dummies instead of getting rid of them.Using the 22 predictors,we fit the lasso model on the training set,with  with $\lambda$ chosen by cross-validation with k-fold equals 10. To validate the performance of our model, we predict the sale price of houses in the test set using the lasso model fit on the training set. Then, we will examine the test error rate by measuring the root mean squares error. The R package required to implement this method is 'glmnet'.
 
 
+-----
+To answer our second research question relating to the classification problem, "Which  statistical learning method most accurately classifies houses by neighborhood based on the other available housing features?", we decided to use three different classification models: Naive Beyes, Tree-Based Classification and XgBoost. For each of the these three methods we divide our data into two sets 'train' and 'test'. The 'train' set contains 80% of our entire data where as the 'test' set contains the remaining 20%. The train and the test set are the same for all three Classification methods The response variable is Neighborhood and the predictors are YrBuilt, YearRemodAdd, SalePrice,**Don't remember all the variable names that you mentioned**.A brief description on each of these methods is below.
 
+**1. Naive Bayes**
+To implement Naive Bayes, we use the naiveBayes() function, which is part of the e1071 library, on our test set. To evaluate the performance of our model, we will predict the response on the test data and produce a contingency table comparing the true test labels to the predictions. The R package required to implement this method is 'e1071'.
 
+**2. Tree-Based Classification**
+To implement this method, we will fit a decision classification tree to the training data, using 'neighborhood' as the response variable. For predictors, we will use all other variables. To evaluate the performance of our model, we will predict the response on the test data and produce a contingency table comparing the true test labels to the predictions. The R package required to implement this method is 'tree'. 
+
+**3. XgBoost**
 
 
 
 ## Results
 
-###Linear Regression
+### Which statistical learning method most accurately predicts housing prices using other available housing features?
+
+####Linear Regression
 ```{r}
 #drop neighborhoods that had less than 50 houses
 dataf<-final_dat[final_dat$Neighborhood != "Mitchel" & final_dat$Neighborhood != "NoRidge"
@@ -227,25 +254,25 @@ sqrt(mean((test_set$SalePrice-preds)^2))
 coef(model)
 ```
 Based on the output of the regression model, the 5 variables that seems to affect the sale price of the houses are 
-KitchenAbvGr, Fireplace, Neighborhood_NridgHt (a dummy that indicates whether house is in 'NridgHt' neighborhood),
-Neighborhood_Crawfor (a dummy that indicates whether house is in 'Crawfor' neighborhood and Neighborhood_Edwards (a dummy that indicates whether house is in 'Edwards' neighborhood.
+ Neighborhood_NridgHt (a dummy that indicates whether house is in 'NridgHt' neighborhood),
+Neighborhood_Crawfor (a dummy that indicates whether house is in 'Crawfor' neighborhood and Neighborhood_Somerst (a dummy that indicates whether house is in 'Somerst' neighborhood,BldgType_Twnhs (a dummy that indicats whether the building type is a townhouse end unit or not) and BldgType_TwnhsE (a dummy that indicats whether the building type is a townhouse inside unit or not).
 
 **Interpretation of 5 coefficients highest in magnitude**
 
-- Coefficient on KitchenAbvGr: Controlling for the  variables,including, but not limited to, lot area, garage finish type, central air conditionaing and neighborhood, an increase in number of kitchen by 1 decreases the saleprice by $33924.08 .
+-Coefficient on Neighborhood_NridgH: Controlling for the  variables,including, but not limited to, lot area, garage finish type, central  air conditioning, a house in NridgH neighborhood is pricier by $69648.21 compared to a house in BrkSide Neighborhood.
 
--Coefficient on Fireplace: Controlling for the  variables,including, but not limited to, lot area, garage finish type, central air conditionaing and neighborhood, a unit increase in number of fireplaces increases the saleprice by $10022.39.
+-Coefficient on Neighborhood_Crawfor: Controlling for the  variables,including, but not limited to, lot area, garage finish type, central air conditioning, a house in Crawfor neighborhood is pricier by $19922.71 compared to a house in BrkSide Neighborhood.
 
--Coefficient on Neighborhood_NridgH: Controlling for the  variables,including, but not limited to, lot area, garage finish type, central and air conditioning, a house in NridgH neighborhood is pricier by $76357.29 compared to a house in BrkSide Neighborhood.
+- Coefficient on Neighborhood_Somerst: Controlling for the  variables,including, but not limited to, lot area, garage finish type, central air conditioning, a house in Somerst neighborhood is pricier by $119817.21 compared to a house in BrkSide Neighborhood.
 
--Coefficient on Neighborhood_Crawfor: Controlling for the  variables,including, but not limited to, lot area, garage finish type, central and air conditioning, a house in Crawfor neighborhood is pricier by $27039.75 compared to a house in BrkSide Neighborhood.
+- Coefficient on BldgType_Twnhs: Controlling for the  variables,including, but not limited to, lot area, garage finish type, central air conditioning, a townhouse end unit is cheaper by $62914.39 compared to  a single-family detached.	
 
-- Coefficient on Neighborhood_Edwards: Controlling for the  variables,including, but not limited to, lot area, garage finish type, central and air conditioning, a house in Edwards neighborhood is cheaper by $16307.46 compared to a house in BrkSide Neighborhood.
+- Coefficient on BldgType_TwnhsE: Controlling for the  variables,including, but not limited to, lot area, garage finish type, central air conditioning, a townhouse end unit is cheaper by $33720.04 compared to  a single-family detached.
 
 
-The RMSE error is 28837.11. This implies that the prediction of houses in the test set is,on average, off by $28837.11. This error seems small given that the the sale peice of the houses are in millions of dollar.
+The RMSE error is 24588.56. This implies that the prediction of houses in the test set is,on average, off by $24588.56. This error seems small given that the the sale price of the houses are much higer.
 
-### Ridge Regression
+#### Ridge Regression
 
 ```{r}
 library(glmnet)
@@ -268,26 +295,15 @@ ridge_final <- glmnet(x, y, alpha = 0, lambda = best_lam)
 round(coef(ridge_final), 3)
 ```
 Based on the output of the regression model, the 5 variables that seems to affect the sale price of the houses are 
-KitchenAbvGr, Neighborhood_Somerst(a dummy that indicates whether house is in 'Somerst' neighborhood)  , Neighborhood_NridgHt (a dummy that indicates whether house is in 'NridgHt' neighborhood),Neighborhood_Crawfor (a dummy that indicates whether house is in 'Crawfor' neighborhood and Neighborhood_Edwards (a dummy that indicates whether house is in 'Edwards' neighborhood.
-
-**Interpretation of 5 coefficients highest in magnitude**
-
-- Coefficient on KitchenAbvGr: Controlling for the  variables,including, but not limited to, lot area, garage finish type, central air conditionaing and neighborhood, an increase in number of kitchen by 1 decreases the saleprice by $23577.447 .
-
--Coefficient on Neighborhood_NridgH: Controlling for the  variables,including, but not limited to, lot area, garage finish type, central and air conditionaing, a house in NridgH neighborhood is pricier by $58767.440 compared to a house in BrkSide Neighborhood.
-
--Coefficient on Neighborhood_Crawfor: Controlling for the  variables,including, but not limited to, lot area, garage finish type, central and air conditioning, a house in Crawfor neighborhood is pricier by $ 22619.590 compared to a house in BrkSide Neighborhood.
-
-- Coefficient on Neighborhood_Edwards: Controlling for the  variables,including, but not limited to, lot area, garage finish type, central and air conditioning, a house in Edwards neighborhood is cheaper by $16307.46 compared to a house in BrkSide Neighborhood.
-
- - Coefficient on Neighborhood_Somerst: Controlling for the  variables,including, but not limited to, lot area, garage finish type, central and air conditioning, a house in Somerst neighborhood is cheaper by $15562.545 compared to a house in BrkSide Neighborhood.
+ Neighborhood_NridgHt (a dummy that indicates whether house is in 'NridgHt' neighborhood),
+Neighborhood_Crawfor (a dummy that indicates whether house is in 'Crawfor' neighborhood and Neighborhood_Somerst (a dummy that indicates whether house is in 'Somerst' neighborhood,BldgType_Twnhs (a dummy that indicats whether the building type is a townhouse end unit or not) and BldgType_TwnhsE (a dummy that indicats whether the building type is a townhouse inside unit or not). The interpretation is similar to that of linear regression regression.
 
 
-The RMSE error is 29680.6. This implies that the prediction of houses in the test set is,on average, off by $29680.6. This error seems small given that the the sale peice of the houses are in millions of dollar.
+The RMSE error is 25638.98. This implies that the prediction of houses in the test set is,on average, off by $25638.98. This error seems small given that the the sale peice of the houses are much higer.
 
 
 
-### Lasso Regression
+#### Lasso Regression
 
 ```{r}
 
@@ -302,12 +318,15 @@ lasso_coef
 #RMSE
 sqrt(mean((predict(lasso_mod, s= best_lam, newx = x[test_ids,]) - y_test)^2))
 ```
-Based on the output, the lasso model sclaed the coefficients on LotArea,HalfBath, BedRoomAbvGr, Neighborhood_Gilbert, Neighborhood_NWAmes, GarageFinish_NA and PavedDrive_Y to 0. The interpretation of the coefficients of Neighborhood_Gilbert, Neighborhood_NWAmes, GarageFinish_NA scaled to 0 is a bit trickier  since neighborhood and GarageFinish were categorical variables with multiple classes but only coefficients of certain classes were scaled to 0. It is hard to tell whether this implies neighborhood and garage finish are not important covariates or only certain classes of these categorical variables are important when predicting for saleprice.
+Based on the output, the lasso model sclaed the coefficients on LotArea,HalfBath, BedRoomAbvGr, YrSold, Neighborhood_Gilbert,Neighborhood_NAmes, Neighborhood_NWAmes,Neighborhood_Sawyer,Neighborhood_SawyerW, BldgType_2fmCon, HouseStyle_2.5Unf,HouseStyle_2Story,HouseStyle_SFoyer,HouseStyle_SLvl, BsmtFinType1_BLQ, BsmtFinType1_LwQ, BsmtFinType1_Rec, BsmtFinType1_NA, CentralAir_Y, GarageFinish_NA and PavedDrive_Y to 0. The interpretation of the coefficients of some of the categories in Neighborhoods, Building Type, HouseStyle, Basement Finish Type and Garage finish getting scaled to 0 is a bit trickier  since these variables were categorical variables with multiple classes but only coefficients of certain classes were scaled to 0. It is hard to tell whether this implies these variables are not important covariates or only certain classes of these categorical variables are important when predicting for saleprice.
 
-Similar to Ridge Regressionl, the 5 variables that seems to affect the sale price of the houses the most in the Lasso model are KitchenAbvGr, Neighborhood_Somerst(a dummy that indicates whether house is in 'Somerst' neighborhood)  , Neighborhood_NridgHt (a dummy that indicates whether house is in 'NridgHt' neighborhood),Neighborhood_Crawfor (a dummy that indicates whether house is in 'Crawfor' neighborhood and Neighborhood_Edwards (a dummy that indicates whether house is in 'Edwards' neighborhood. The interpretation is similar to that of ridge regression.
+Similar to Linear ans Ridge Regression, the 5 variables that seems to affect the sale price of the houses the most in the Lasso model are Neighborhood_NridgHt (a dummy that indicates whether house is in 'NridgHt' neighborhood),
+Neighborhood_Crawfor (a dummy that indicates whether house is in 'Crawfor' neighborhood and Neighborhood_Somerst (a dummy that indicates whether house is in 'Somerst' neighborhood,BldgType_Twnhs (a dummy that indicats whether the building type is a townhouse end unit or not) and BldgType_TwnhsE (a dummy that indicats whether the building type is a townhouse inside unit or not). The interpretation is similar to that of linear regression.
 
-The RMSE error is 28752.86. This implies that the prediction of houses in the test set is,on average, off by $29680.6. This error seems small given that the the sale price of the houses are in millions of dollar.
+The RMSE error is 25077.4. This implies that the prediction of houses in the test set is,on average, off by $25077.4. This error seems small given that the the sale price of the houses are much higer.
 
+
+### Which  statistical learning method most accurately classifies houses by neighborhood based on the other available housing features?
 #KNN
 ```{r}
 library(class)
@@ -325,22 +344,38 @@ classification_dat<-final_dat%>%
 
 classification_dat_scale<- classification_dat %>%
   mutate_if(is.numeric, scale)
+
+
+sd_year <- sd(classification_dat$YearBuilt)
+mean_year <- mean(classification_dat$YearBuilt)
 ```
 
 ```{r}
 train_set<-classification_dat_scale[train_ids,]
 test_set<-classification_dat_scale[test_ids,]
-
-knn_preds <- knn(train = train_set%>%dplyr::select(-Neighborhood),,
-                 test = test_set%>% dplyr::select(-Neighborhood),,
-                 cl =train_set$Neighborhood, 
-                 k = 10)
+misclassification<-NULL
+#for (i in 1:(nrow(train_set)/2)){
+for (i in 1:100){
+knn_preds <- knn(train = classification_dat_scale%>%dplyr::select(-Neighborhood),
+                 test = classification_dat_scale%>% dplyr::select(-Neighborhood),
+                 cl =classification_dat_scale$Neighborhood, 
+                 k = i)
 #table(pred = knn_preds, truth = test_set$Neighborhood)
-mean(test_set$Neighborhood != knn_preds)
+misclassification[i]<-mean(classification_dat_scale$Neighborhood != knn_preds)}
+
+
+```
+```{r}
+knn_result<-data.frame (K  = 1:100,
+            missclassification_rate= misclassification)
+knn_result  %>%
+  ggplot(., aes(x = K, y = missclassification_rate)) +
+  geom_point() 
+
 ```
 
 
-#Naive Bayes
+#### Naive Bayes
 ```{r}
 library(e1071)
 #final_dat$GarageFinish[is.na(final_dat$GarageFinish)] <- "NoGrg"
@@ -362,10 +397,7 @@ cm <- table(test_set$Neighborhood, y_pred)
 mean(test_set$Neighborhood != y_pred)
 ```
 
-
-
-
-###Tree
+####Tree
 ```{r}
 #final_dat$GarageFinish[final_dat$GarageFinish == 'NA'] <- 'NoGrg'
 #final_dat$GarageFinish[is.na(final_dat$GarageFinish)] <- "NoGrg"
@@ -395,15 +427,13 @@ text(tree_house,pretty=0,cex=.5)
 #tree_preds <- predict(tree_house, test_set, type = "class")
 #mean(test_set$Neighborhood != tree_preds)
 
+0.37 * sd_year + mean_year
 ```
-```{r}
-dat %>%
- group_by(Neighborhood) %>%
-summarise(count = n())%>%
-  arrange(count)
-```
+**Need to check if pruning makes it better**
 
-### XgBoost
+
+
+#### XgBoost
 
 ```{r}
 library(xgboost)
@@ -475,7 +505,6 @@ xgb.pred$label = levels(neighborhood)[test_label+1]
 result = sum(xgb.pred$prediction==xgb.pred$label)/nrow(xgb.pred)
 ```
 
-
-
-
 ## Discussion
+
+To answer our first research question relating to the regression problem, "Which statistical learning method most accurately predicts housing prices using other available housing features", we use three different regression models: Linear Regression, Ridge Regression and Lasso Regression. We found that the Root Mean Squared Error (RMSE) was 24588.56 for simple linear regression model, 25638.98. for ridge regression model and 25077.4. for the lasso model. This implies that for the AMes housing dataset, the simple linear regression model performed the best. This was a little surprising to us as we expected that the lasso model might fit better as it shrinks features that are not has important to 0. However, after giving some though we realized that the lasso model did not really shrink many variables to 0 in our model, implying that most of the variables that we used in our model are important features in determining the sale price of the houses.Thus, it makes sense why the linear model performed the best. Overal, we think that the our best performing model is a good choice to predict the sale prices as RMSE of 25077.4 is low if we compare it to the sale price of houses, which are much higher.
