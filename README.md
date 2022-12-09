@@ -13,6 +13,8 @@ The data found in file Data comes from the Ames Housing dataset, publicly availa
 |BldgType| character | Type of dwelling|
 |HouseStyle| character |  Style of dwelling|
 |BsmtFinType1| character | Rating of basement finished area|
+|Sold_08| character| House was sold in 2008 (Yes/No)|
+|YearRemodAdd|character|House was remodelled (Yes/No)|
 |SalePrice|numeric|Price of house|
 |PoolAre|numeric|Pool area in square feet|
 |LotArea|numeric|Lot size in square feet|
@@ -27,5 +29,4 @@ The data found in file Data comes from the Ames Housing dataset, publicly availa
 |OverallQual|integer|Rates the overall material and finish of the house|
 |OverallCond|integer|Rates the overall condition of the house|
 |YrBuilt|integer|Original construction date|
-|YearRemodAdd|integer|Year house was remodeled|
 |YrSold|integer|Year house was sold|
