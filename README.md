@@ -1,7 +1,7 @@
 # Final project codebook 
 
 
-The data found in file Data comes from the Ames Housing dataset, publicly available on Kaggle. The variables in the data are as follows:
+The data found in file Data comes from the Ames Housing dataset, publicly available on Kaggle. The variables that we used for model creation are as follows:
 
 
 | variable | type | description |
@@ -16,17 +16,16 @@ The data found in file Data comes from the Ames Housing dataset, publicly availa
 |Sold_08| character| House was sold in 2008 (Yes/No)|
 |Remod|character|House was remodelled (Yes/No)|
 |SalePrice|numeric|Price of house|
-|PoolAre|numeric|Pool area in square feet|
+|PoolArea|numeric|Pool area in square feet|
 |LotArea|numeric|Lot size in square feet|
 |TotalBsmtSF|numeric|Total square feet of basement area|
 |GarageArea|numeric|Size of garage in square feet|
 |GrLivArea|numeric|Above ground living area square feet|
-|Full Bath|integer|Number of full bathrooms above ground|
+|FullBath|integer|Number of full bathrooms above ground|
 |HalfBath|integer|Number of half bathrooms above ground|
 |BedroomAbvGr|integer|Number of bedrooms above ground|
 |KitchensAbvGr|integer|Number of kitchens above ground|
-|FirePlaces|integer|Number of fireplaces|
+|Fireplaces|integer|Number of fireplaces|
 |OverallQual|integer|Rates the overall material and finish of the house|
 |OverallCond|integer|Rates the overall condition of the house|
-|YrBuilt|integer|Original construction date|
-|YrSold|integer|Year house was sold|
+|YearBuilt|integer|Original construction date|
