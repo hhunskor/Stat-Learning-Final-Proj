@@ -19,6 +19,9 @@ library(dplyr)
 library(tidyr)
 library(ggcorrplot)
 library(xgboost)
+library(tree)
+library(glmnet)
+library(e1071)
 ```
 
 ## Introduction
@@ -377,7 +380,6 @@ This means that the prediction of houses in the test set is,on average, off by $
 #### Ridge Regression
 
 ```{r}
-library(glmnet)
 x <- model.matrix(SalePrice ~ ., dat)[,-1]
 y <- dat$SalePrice
 ```
@@ -476,8 +478,6 @@ This means that the prediction of houses in the test set is, on average, off by 
 
 #### Naive Bayes
 ```{r}
-library(e1071)
-
 # Fitting Naive Bayes Model
 
 classifier_cl <- naiveBayes(Neighborhood ~ ., dat[train_ids,])
@@ -499,7 +499,6 @@ The misclassification rate is ~0.56, which is really high.
 #### Tree
 
 ```{r}
-library(tree)
 tree_dat <-dat %>%
   mutate_if(is.character, factor)
 tree_house<-tree(as.factor(Neighborhood) ~ .,tree_dat[train_ids,])
