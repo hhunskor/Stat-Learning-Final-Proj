@@ -109,13 +109,9 @@ ggplot(dat, aes(x = LotArea, y = SalePrice)) +
 
 This plot suggests that, although there may be a slight positive correlation between the LotArea and SalePrice, there are likely other variables that contribute to how expensive a house is.
 
-Let's now look a bit more at the SalePrice variable and its distribution:
+Let's now look a bit more at the SalePrice variable and how it changed over the years.
 
 ```{r Sale Price EDA}
-#Histogram of house prices
-dat %>%
-  ggplot(., aes(x = SalePrice)) +
-  geom_histogram()
 
 #Average house price over time
 dat %>%
@@ -125,14 +121,27 @@ dat %>%
   geom_point() + geom_line()
 ```
 
-Judging from the histogram, the distribution of SalePrice in our data set is slightly right skewed. This suggests that there are some outlier properties with significantly higher sale prices. To account for this, we will add a logarithmic transformation to the SalePrice variable (see data cleaning section).
-
-In the second plot, we can observe a huge drop in average sale price of houses in our data coinciding with the 2008 housing market crash. To try to account for this, we decided to replace YrSold with a binary variable 'Sold_08' that will be Y if a house was sold in 2008, and N otherwise:
+From the plot, we can observe a huge drop in average sale price of houses in our data coinciding with the 2008 housing market crash. To try to account for this, we decided to replace YrSold with a binary variable 'Sold_08' that will be Y if a house was sold in 2008, and N otherwise:
 
 ```{r Accounting for Housing Crash}
 dat$Sold_08 <- as.factor(ifelse(dat$YrSold == '2008', 'Y', 'N'))
 dat <- select(dat, -YrSold)
 ```
+
+```{r}
+#Histogram of house prices
+dat %>%
+  ggplot(., aes(x = SalePrice)) +
+  geom_histogram()
+```
+Judging from the histogram, the distribution of SalePrice in our data set is slightly right skewed. This suggests that there are some outlier properties with significantly higher sale prices. To account for this, we will add a logarithmic transformation to the SalePrice variable to ensure that sale price is normally distributed as shown in the plot below.
+```{r SalePrice Log Transform}
+dat$SalePrice <- log(dat$SalePrice)
+dat %>%
+  ggplot(., aes(x = SalePrice)) +
+  geom_histogram()
+```
+
 
 #### Investigating Neighborhood Variable
 
@@ -148,58 +157,23 @@ dat %>%
        y = "Neighborhood")
 ```
 
-This plot reveals that there is a pretty big gradient of neighborhood sizes. To simplify our models and their interpretations, we want to reduce the number of neighborhood categories by grouping some of the neighborhoods into an 'Other' category.
+This plot reveals that there is a pretty big gradient of neighborhood sizes. To simplify our models and their interpretations, we decided to merge NoRidge (Northridge) and NridgHt (Northridge Heights) because they both are comprised primarily of new, expensive homes. Also, a quick Google search revealed that the two neighborhoods border each other geographically. We defined this combined neighborhood as 'GrNoRidge' or Greater Northridge. Additionally, we decided to go ahead and drop the 180 houses in neighborhoods with < 30 houses. 
 
-To do so, we first isolated the neighborhoods with fewer than 50 homes:
-
-```{r}
-other_neighborhoods <- dat %>%
-  group_by(Neighborhood) %>%
-  filter(n() < 50) %>%
-  distinct(Neighborhood)
-```
-
-We then looked at how these 16 neighborhoods vary in terms of average price and average house age:
-
-```{r}
-dat %>%
-  filter(dat$Neighborhood %in% other_neighborhoods$Neighborhood) %>%
-  group_by(Neighborhood) %>%
-  summarise(avg_built_date = mean(YearBuilt),
-            mean = mean(SalePrice)) %>%
-  arrange(-avg_built_date) %>%
-  ggplot(aes(x = avg_built_date, y = mean)) +
-  geom_text(aes(label = Neighborhood))
-```
-
-Right off the bat, we decided to merge NoRidge (Northridge) and NridgHt (Northridge Heights) because they both are comprised primarily of new, expensive homes. Also, a quick Google search revealed that the two neighborhoods border each other geographically. We defined this combined neighborhood as 'GrNoRidge' or Greater Northridge:
 
 ```{r}
 dat$Neighborhood <- ifelse(dat$Neighborhood %in% c('NoRidge', 'NridgHt'), 'GrNoRidge', dat$Neighborhood)
 ```
 
-Other than that, there weren't really any other neighborhood merges that made sense geographically. And if we were to merge all the neighborhoods with < 50 houses, we would get an 'Other' neighborhood category that accounts for the second highest number of houses in the dataset. This would likely skew how our model predicts neighborhood classification.
-
-So, we decided look at how much data we would be losing if we just dropped the neighborhoods with < 50 houses or < 30 houses:
 
 ```{r}
-nrow(filter(dat, dat$Neighborhood %in% other_neighborhoods$Neighborhood))
-
-#Just < 30 houses
 other_neighborhoods <- dat %>%
   group_by(Neighborhood) %>%
   filter(n() < 30) %>%
   distinct(Neighborhood)
-
-nrow(filter(dat, dat$Neighborhood %in% other_neighborhoods$Neighborhood))
-```
-
-We decided to go ahead and drop the 180 houses in neighborhoods with < 30 houses:
-
-```{r}
 dat <- dat %>%
   filter(! Neighborhood %in% other_neighborhoods$Neighborhood)
 ```
+
 
 #### Correlation between some of the numeric and discrete data fields (most importantly SalePrice):
 
@@ -207,16 +181,13 @@ dat <- dat %>%
 corr_mtx <- cor(select_if(dat, is.numeric), use = "pairwise.complete.obs")
 
 ggcorrplot(corr_mtx, # input the correlation matrix
-           hc.order = TRUE, 
+           hc.order = FALSE, 
            type = "upper", 
-           lab = TRUE,
-           method = "circle", 
+           method = "square", 
            colors = c("tomato2", "white", "springgreen3"))
 ```
 
 As seen from above, housing prices seem to be the most correlated (positively) with overal quality of the house, above ground living area (in sq. ft), total basement area (in sq. ft) and garage area (in sq. ft). The price is also moderately correlated with number of full bathrooms.
-
-## Data Cleaning and Scaling
 
 #### Feature Engineering
 
@@ -226,7 +197,7 @@ There are a couple problems with the way our variables are formatted. First, if 
 nrow(filter(dat, YearRemodAdd == YearBuilt))
 ```
 
-Since over half the houses have never been remodeled, we just decided to convert YearRemodAdd to a binary variable:
+Since over half the houses have never been remodeled, we just decided to convert YearRemodAdd to a binary variable that takes "Y" if the house has been remodelled and "N" otherwise.
 
 ```{r Remodel Variable}
 dat$Remod <- as.factor(ifelse(dat$YearBuilt == dat$YearRemodAdd, 'Y', 'N'))
@@ -239,25 +210,6 @@ Additionally, PavedDrive is a categorical variable with three possible class: Y 
 dat$PavedDrive <- ifelse((dat$PavedDrive == "Y"), "Y", "N")
 ```
 
-#### Scaling/Transformations
-
-Here is where we want to apply the log transformation to our SalePrice variable:
-
-```{r SalePrice Log Transform}
-dat$SalePrice <- log(dat$SalePrice)
-```
-
-Now, we want to scale all of our numeric variables:
-
-```{r Scaling}
-mean_year<-mean(dat$YearBuilt)
-sd_year<-sd(dat$YearBuilt)
-
-num_vars <- names(dat %>% select_if(is.numeric))
-num_vars <- num_vars[! num_vars == "SalePrice"] #We didn't scale SalePrice because we already added a log transformation
-dat[, num_vars] <- scale(dat[, num_vars], center=TRUE, scale=TRUE)
-```
-
 #### Handling NAs
 
 One final issue with our data is that some features still have NA values:
@@ -266,36 +218,48 @@ One final issue with our data is that some features still have NA values:
 sapply(dat, function(x) sum(is.na(x)))
 ```
 
-Both 'GarageFinish' and 'BsmtFinType1' are NA when a house doesn't have that respective feature. To handle this, we replaced those NA values with their own classification:
+Both 'GarageFinish' and 'BsmtFinType1' are NA when a house doesn't have that respective feature. To handle this, we replaced NA values in 'GarageFinish' with "NoGar" and NA values in 'BsmtFinType1' with "NoBsmt".
 
 ```{r Handle NAs}
 dat$GarageFinish <- ifelse(is.na(dat$GarageFinish), "NoGar", dat$GarageFinish)
 dat$BsmtFinType1 <- ifelse(is.na(dat$BsmtFinType1), "NoBsmt", dat$BsmtFinType1)
 ```
 
+
+Our final dataset has a total of 1018 observations. The mean SalePrice of a house in our final data set is:
+```{r}
+mean(exp(dat$SalePrice))
+```
+Likewise, the standard deviance in the SalePrice of a house in our final dataset is:
+```{r}
+sd(exp(dat$SalePrice))
+```
 ## Methodology
 
 ### Regression
 
-To answer our first research question - "Which statistical learning method most accurately predicts housing prices using other available housing features?" - we decided to use five different regression techniques: simple linear regression, k-fold CV regression, ridge regression, lasso regression, and XGBoost.
+To answer our first research question - "Which statistical learning method most accurately predicts housing prices using other available housing features?" - we decided to use four different regression techniques: linear regression, ridge regression, lasso regression, and XGBoost.
 
-For all models aside from K-fold CV regression, we divide our data into two sets 'train' and 'test'. The 'train' set contains 80% of our entire data where as the 'test' set contains the remaining 20%. The response variable is 'SalePrice' and the predictors are the other 22 features we included. 
+For all models, we randomly divide our data into two sets 'train' and 'test'. The 'train' set contains 80% of our entire data where as the 'test' set contains the remaining 20%. The train and the test set are the same for all both models. The response variable is 'SalePrice' and the predictors are the other 22 features we included. All numeric variables have been scaled to account for skewness.
+```{r Scaling}
+unscaled_dat<-dat
+num_vars <- names(dat %>% select_if(is.numeric))
+num_vars <- num_vars[! num_vars == "SalePrice"] #We didn't scale SalePrice because we already added a log transformation
+dat[, num_vars] <- scale(dat[, num_vars], center=TRUE, scale=TRUE)
+```
 
 Below is a brief description of each method:
 
-**1. Simple Linear Regression**
+**1. Linear Regression**
 We trained our simple linear regression model on test data to predict SalePrice using all available predictors. For categorical variables, we create dummy variables.To assess the performance of our model, we predicted the sale price of houses in the test set, and examined the test error rate by measuring the root mean squares error.
 
-**2. K-fold CV Linear Regression**
-To implement K-fold CV linear regression, we used the same modeling technique as simple linear regression, but this time using 10-fold cross validation. To assess model performance, we took the average of the test RMSE across all 10 folds.
-
-**3. Ridge Regression**
+**2. Ridge Regression**
 We implemented the ridge regression to examine whether shrinking features that are not as important improves the performance of the model. Using the 22 predictors, we fit the ridge model on the training set, with $\lambda$ chosen by 10-fold cross-validation. For categorical variables, we create dummy variables. To validate the performance of our model, we predicted the sale price of houses in the test set and then examined the test error rate by measuring the root mean squares error. The R package required to implement this method is 'glmnet'.
 
-**4. Lasso Regression**
+**3. Lasso Regression**
 22 predictors, although better than having too few predictors, may be too many to use for this research question. Thus, we want to implement the lasso method so that coefficients of features that are not as important shrinks to 0. Using the 22 predictors, we fit the lasso model on the training set, with $\lambda$ chosen by cross-validation with k-fold equals 10. For categorical variables, we create dummy variables. We realize that interpreting this might be tricky as only coefficient on some of the classes might be shrunk to 0, but we believe features such as neighborhood are important in determining the sale price.Thus, we chose to create dummies for categorical variables instead of getting rid of them. To validate the performance of our model, we predicted the sale price of houses in the test set using the lasso model fit on the training set. Then, examined the test error rate by measuring the root mean squares error. The R package required to implement this method is 'glmnet'.
 
-**5. XGBoost**
+**4. XGBoost**
 The XGBoost algorithm stands for eXtreme Gradient Boosting and is one of the most popular gradient boosted trees algorithms. At a high level, the XGBoost algorithm works by building decision trees on the training data, and then combining the predictions made by these trees to make a final prediction. The decision trees are built in a way that tries to minimize the loss function, which is a measure of how far the predicted values are from the true values in the training data.
 
 One key feature of the XGBoost algorithm is that it uses regularization to prevent overfitting. This is achieved by adding a regularization term to the loss function, which penalizes models that are too complex.
@@ -304,21 +268,21 @@ For our project, we trained the XGBoost algorithm on all available predictors - 
 
 ### Classification
 
-To answer our second research question relating to the classification problem, "Which statistical learning method most accurately classifies houses by neighborhood based on the other available housing features?", we decided to use two different classification models: Naive Bayes and Tree-Based Classification. For both methods we divide our data into two sets 'train' and 'test'. The 'train' set contains 80% of our entire data where as the 'test' set contains the remaining 20%. The train and the test set are the same for all both models.
+To answer our second research question relating to the classification problem, "Which statistical learning method most accurately classifies houses by neighborhood based on the other available housing features?", we decided to use two different classification models: Naive Bayes and Tree-Based Classification. For both methods we randomly divide our data into two sets 'train' and 'test'. The 'train' set contains 80% of our entire data where as the 'test' set contains the remaining 20%. The train and the test set are the same for  both models. The response variable is 'Neighborhood' and the predictors are the other 22 features we included. The numeric variables will not be scaled since neither Naive Bayes nor Tree-Based method relies on distance between two observations.
 
 Below is a brief description of each method:
 
 **1. Naive Bayes**
-To implement Naive Bayes, we used the naiveBayes() function, which is part of the e1071 library, on our test set. To evaluate the performance of our model, we predicted the response on the test data and produced a contingency table comparing the true test labels to the predictions.
+To implement Naive Bayes, we used the naiveBayes() function, which is part of the e1071 library, on our train set. To evaluate the performance of our model, we predicted the response on the test data and produced a contingency table comparing the true test labels to the predictions. The housed were classified into neighborhoods based on the class with the highest probability.
 
 **2. Tree-Based Classification**
-To implement this method, we fit a decision classification tree to the training data, using 'Neighborhood' as the response variable. We used all available predictors to fit the model. To evaluate the performance of our model, we predictED the response on the test data and produceD a contingency table comparing the true test labels to the predictions.
+To implement this method, we fit a decision classification tree to the training data, using 'Neighborhood' as the response variable. We used all available predictors to fit the model. To evaluate the performance of our model, we predicted the response on the test data and produced a contingency table comparing the true test labels to the predictions. Lastly, we decided to prune the classification tree and check whether pruning improved the prediction of the response on the test set.
 
 ## Results
 
 ### Which statistical learning method most accurately predicts housing prices using other available housing features?
 
-#### Simple Linear Regression
+#### Linear Regression
 
 ```{r Creating Test and Train Sets}
 set.seed(1)
@@ -343,39 +307,10 @@ coef(mod1)
 Based on the output of the regression model, the 5 variables that seems to affect the sale price of the houses are 
 GrLivArea, NeighborhoodCrawfor (a dummy that indicates whether house is in 'Crawfor' neighborhood ), OverallQual, YearBuilt and TotalBsmtSF.Since the numeric variables are scaled, it is a little tricky to estimate by how much these variables affect the Sale price of the house. However, the sign on the coefficients of these variables are informative in that it indicates in which direction the price of the house will change as these variable changes. For example, the coefficient of 0.114 on GrLivArea implies that, controlling for other factors, an increase in above ground living area(in sq ft) increases the sale price of the house. The coefficient of 0.0963 on NeighborhoodCrawfor implies that, controlling for other factors, the sale price of houses in Crawfor Neighborhood are higher than sale price of houses in BrkSide  Neighborhood (which is our baseline neighborhood).
 
-The Root Mean Squared Error (RMSE), which has been re-scaled to USD, is 17498.74. 
+To find the Root Mean Squared Error (RMSE), we re-scaled the log price back to USD using $RMSE=\frac{1}{n}\sum(e^{y_i}-e^{\hat{y_i}})^2$, where y=log of price. The RMSE for the linear model is USD 17498.74. 
 
-This means that the prediction of houses in the test set is, on average, off by $17,498.74. This error seems small given that the sale prices of the houses are much higher.
+This means that the prediction of houses in the test set is, on average, off by USD 17,498.74. This error is small given that the the standard deviation of the sale price of the houses, as determined earlier in EDA, is USD 68,375.12.
 
-#### CV Regression
-
-```{r CV Linear Regression}
-set.seed(1)
-K <- 10
-
-# randomly split the indices/observations into K groups of roughly equal size
-rand <- sample(1:nrow(dat))
-group_ids <- split(rand, cut(seq_along(rand), K, labels = FALSE))
-
-rmse_vec <- rep(NA,K)
-n <- nrow(dat)
-
-for(i in 1:K){
-  test_ids <- group_ids[[i]]
-  train_ids <- (1:n)[-test_ids]
-  
-  train_mod <- lm(SalePrice ~ ., data = dat[train_ids, ])
-  pred <- predict(train_mod, newdata = dat[test_ids,])
-  mse_i <- (exp(dat$SalePrice[test_ids]) - exp(pred))^2
-  rmse_vec[i] <- sqrt(mean(mse_i))
-}
-
-mean(rmse_vec)
-```
-
-The Root Mean Squared Error (RMSE), which has been re-scaled to USD, is 17950.85.
-
-This means that the prediction of houses in the test set is,on average, off by $17,950.85. Again, this error seems relatively small.
 
 #### Ridge Regression
 
@@ -428,7 +363,7 @@ Based on the output, the lasso model scaled the coefficients on 28 of the 49 var
 
 The 5 variables that seems to affect the sale price of the houses are GrLivArea, YearBuilt, NeighborhoodCrawfor  (a dummy that indicates whether house is in 'Crawfor' neighborhood), OverallQual and CentralAirY(a dummy that indicates whether house is in 'Crawfor' neighborhood). The interpretation for GrLivArea, NeighborhoodCrawfor  and  OverallQual is similar to that of Linear Regression. The coefficient of  0.08 on YearBuilt implies that, controlling for other variables, newwly built houses are more expensive. Likewise, the coefficient on CentralAirY implies that, controlling for other variables, houses that have central air conditioning have sale prices higher than houses that don't have central air conditioning.
 
-The RMSE error, which has been re-scaled to USD, is 17882.54. This implies that the prediction of houses in the test set is, on average, off by $17,882.54.
+The RMSE error, which has been re-scaled to USD, is 17882.54. This implies that the prediction of houses in the test set is, on average, off by $17,882.54. This error is small given that the the standard deviation of the sale price of the houses, as determined earlier in EDA, is USD 68,375.12.
 
 #### XGBoost
 
@@ -472,9 +407,14 @@ pred_y = predict(xgb_mod, xgb_test)
 sqrt(mean((exp(test_y) - exp(pred_y))^2))
 ```
 
-This means that the prediction of houses in the test set is, on average, off by $18,810.44.
+This means that the prediction of houses in the test set is, on average, off by $18,810.44. This error is small given that the the standard deviation of the sale price of the houses, as determined earlier in EDA, is USD 68,375.12.
 
 ### Which  statistical learning method most accurately classifies houses by neighborhood based on the other available housing features?
+
+```{r}
+dat<-unscaled_dat
+dat$SalePrice <- exp(dat$SalePrice)
+```
 
 #### Naive Bayes
 ```{r}
@@ -494,37 +434,25 @@ mean(dat[test_ids,]$Neighborhood != y_pred)
 cm
 ```
 
-The misclassification rate is ~0.56, which is really high.
+The misclassification rate is ~0.64, which is really high.
 
 #### Tree
 
 ```{r}
 tree_dat <-dat %>%
   mutate_if(is.character, factor)
-
-
-tree_dat%>%
-  count(Neighborhood)%>%
-  mutate(prop=n/sum(n))
-tree_dat[-train_ids,]%>%
-  count(Neighborhood)%>%
-  mutate(prop=n/sum(n))
 tree_house<-tree(as.factor(Neighborhood) ~ .,tree_dat[train_ids,])
 summary(tree_house)
 plot(tree_house)
 text(tree_house,pretty=0,cex=.5)
 ```
 
-Based on the tree, it seems like YearBuilt is the most important factor for determining the class of the species. Since the data is scaled, it is a little tricky to interpret the tree but we we wanted to we could un-scale the data to know the exact value the split was the based on. For example, the root of the tree, YearBuilt < 0.07, can be un-scaled so that the root note is: 
-
-```{r}
-0.07 * sd_year + mean_year
-```
+Based on the tree, it seems like YearBuilt is the most important factor for determining the class of the species since the root node is 1971.5.
 
 The contingency table for the test set is:
 ```{r}
 tree_preds <- predict(tree_house, tree_dat[test_ids,], type = "class")
-table(preds = tree_preds, true = tree_dat[test_ids,]$Neighborhood)
+table(true = tree_dat[test_ids,]$Neighborhood, preds = tree_preds)
 ```
 
 The misclassification rate is:
@@ -537,7 +465,7 @@ The misclassification rate of ~ 0.45 is still quite high. So we decided to check
 
 ```{r}
 cv_house <- cv.tree(tree_house, FUN = prune.misclass, K = 10)
-
+cv_house
 data.frame(error_rate = cv_house$dev, size = cv_house$size, k = cv_house$k) %>%
   pivot_longer(cols = 2:3, names_to = "var", values_to = "value") %>%
   ggplot(., aes(x = value, y = error_rate)) +
@@ -545,13 +473,12 @@ data.frame(error_rate = cv_house$dev, size = cv_house$size, k = cv_house$k) %>%
   geom_line()+
   facet_wrap(~var, scales = "free")
 ```
-Based on the output, the tree with 13 terminal nodes seems to be the best. Thus, we will prune the original tree to obtain the 13 node tree.  
+Based on the output, the tree with 8 terminal nodes seems to be the best. This is a little surprising since out data consists of a total of 13 neighborhoods; so we expected to see a minimum of 13 terminal nodes. However, we still went ahed and  pruned the original tree to obtain the 8 node tree to determine how it would affect the misclassification error.  
 ```{r}
-prune_house<- prune.misclass(tree_house, best = 13)
+prune_house<- prune.misclass(tree_house, best = 8)
 plot(prune_house)
 text(prune_house,pretty=0,cex=.5)
 ```
-
 The misclassification rate on the test set is then:
 
 ```{r}
@@ -560,13 +487,13 @@ prune_pred <- predict(prune_house, tree_dat[test_ids,],
 mean(tree_dat[test_ids,]$Neighborhood != prune_pred)
 ```
 
-The misclassification rate of the pruned tree did not change significantly. This makes sense because pruning only reduced the number of terminal nodes by 1--the original tree had 14 terminal nodes whereas the pruned one has 13.
+Pruning increased the misclassification slightly from ~ 0.45 to ~ 0.46.
 
 ## Discussion
 
-To summarize the results of our regression models, we found that the Root Mean Squared Error (RMSE) was 17498.74 for simple linear regression model, 17950.85 for linear regression with cross-validation, 16196.87 for ridge regression model and 17882.54 for the lasso model and 18810.44 for the XGBoost method. Thus, our best performing model was the ridge regression. This indicates that most of the predictors that were used in the regression impact the sale price significantly. Overall, we think that the our best performing model is a good choice to predict the sale prices as RMSE of 16196.87 is low if we compare it to the sale price of houses, which are much higher.
+To summarize the results of our regression models, we found that the Root Mean Squared Error (RMSE) was 17498.74 for  linear regression model, 16196.87 for ridge regression model and 17882.54 for the lasso model and 18810.44 for the XGBoost method. Thus, our best performing model was the ridge regression. This indicates that most of the predictors that were used in the regression impact the sale price significantly. Overall, we think that the our best performing model is a good choice to predict the sale prices as RMSE of 16196.87 is low if we compare it to the standard deviation of the sale price of houses, which was USD 68,375.12.
 
-To summarize the results of our classification models, we found the misclassification rates of the Naive Bayes and Decision Tree models to be approximately .67 and .45, respectively. Although the tree-based method performs significantly better, we still think that the misclassification rate is really high. This suggests that perhaps the neighborhoods are not clustered based solely on the predictors we used.
+To summarize the results of our classification models, we found the misclassification rates of the Naive Bayes and Decision Tree models to be approximately .64 and .45, respectively. Although the tree-based method performs significantly better, we still think that the misclassification rate is really high. This suggests that perhaps the neighborhoods are not clustered based solely on the predictors we used.
 
 ## Limitations
 
@@ -576,4 +503,6 @@ Second, we arbitrarily set a seed and used the same train/test split for all our
 
 The third main limitation with this project was handling the Neighborhood variable for classification. In our EDA section, we showed that there are a lot of neighborhoods that have very few houses. This makes it pretty difficult to create a model that will accurately predict those specific neighborhoods for a given test observation. We tried to account for this issue by dropping the neighborhoods with < 30 houses, but that is an imperfect solution and further limits the amount of data we had to train our models on.
 
-The fourth main limitation with this project was interpreting coefficients with categorical variables that had been converted to dummy variables. Our dataset had categorical features that have many different values which in turn created a lot of dummy variables in our models. This made it challenging to identify which of the classifications for a given variable were actually statistically significant.
+The fourth  limitation with this project was interpreting coefficients with categorical variables that had been converted to dummy variables. Our dataset had categorical features that have many different values which in turn created a lot of dummy variables in our models. This made it challenging to identify which of the classifications for a given variable were actually statistically significant.
+
+The fifth main limitation of this project is that for the misclassification problem, we randomly split 80% of our data into train set and 20% of our data into test set. We did not not ensure that the distribution of houses in each neighborhood was the same across the train and the test set, which may have affected our misclassification error rate. To investigate how much this could have affected the misclassification error rate, at the end of our analysis, we quickly checked how many houses belonged to each neighborhood in the test and train set. We found that the distribution was fairly even, which suggested that our misclaafication error rate would not have been significantly different had we maintained the distribution during the test/train split. Having said that, if we had more time, we would have liked to investigate by how much our error rate would change if we split the data into test and train set while mainteaining the distribution of houses in each neighborhood.
