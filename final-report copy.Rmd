@@ -26,7 +26,7 @@ library(e1071)
 
 ## Introduction
 
-There is a plethora of statistical tools available to understand any given set of data. Data scientists and statisticians often use either supervised or unsupervised statistical learning methods to model their data to both better understand trends and extrapolate predictions. For the our project, however, we decided to exclusively focus on supervised learning, mainly for two reasons. First, supervised learning methods are always guided by a response variable which ensures our research objective is clearly defined. Second, supervised learning models have relevant performance metrics (i.e. RMSE for regression problems or misclass. rate for classification problems).
+There is a plethora of statistical tools available to understand any given set of data. Data scientists and statisticians often use either supervised or unsupervised statistical learning methods to model their data to both better understand trends and extrapolate predictions. For our project, however, we decided to exclusively focus on supervised learning, mainly for two reasons. First, supervised learning methods are always guided by a response variable which ensures our research objective is clearly defined. Second, supervised learning models have relevant performance metrics (i.e. RMSE for regression problems or misclass. rate for classification problems).
 
 For this project, we decided to implement a variety of supervised learning techniques using the Ames Housing dataset, which is a publicly available dataset that includes extensive information on the sale of residential properties in Ames, Iowa from 2006 to 2010. It contains 1460 observations with 79 variables on various house specifications. The variables are a mix of continuous, categorical and discrete types.
 
@@ -121,7 +121,7 @@ dat %>%
   geom_point() + geom_line()
 ```
 
-From the plot, we can observe a huge drop in average sale price of houses in our data coinciding with the 2008 housing market crash. To try to account for this, we decided to replace YrSold with a binary variable 'Sold_08' that will be Y if a house was sold in 2008, and N otherwise:
+From the plot, we can observe a huge drop in average sale price of houses in our data coinciding with the 2008 housing market crash. To try to account for this, we decided to replace YrSold with a binary variable 'Sold_08' that will be Y if a house was sold in 2008, and N otherwise.
 
 ```{r Accounting for Housing Crash}
 dat$Sold_08 <- as.factor(ifelse(dat$YrSold == '2008', 'Y', 'N'))
@@ -135,6 +135,7 @@ dat %>%
   geom_histogram()
 ```
 Judging from the histogram, the distribution of SalePrice in our data set is slightly right skewed. This suggests that there are some outlier properties with significantly higher sale prices. To account for this, we will add a logarithmic transformation to the SalePrice variable to ensure that sale price is normally distributed as shown in the plot below.
+
 ```{r SalePrice Log Transform}
 dat$SalePrice <- log(dat$SalePrice)
 dat %>%
@@ -145,7 +146,7 @@ dat %>%
 
 #### Investigating Neighborhood Variable
 
-We also wanted to look at the distribution of houses across neighborhoods, as well as how expensive the homes are in each of the neighborhoods:
+We also wanted to look at the distribution of houses across neighborhoods, as well as how expensive the homes are in each of the neighborhoods..
 
 ```{r Distribution of Houses By Neighborhood}
 dat %>%
@@ -238,9 +239,9 @@ sd(exp(dat$SalePrice))
 
 ### Regression
 
-To answer our first research question - "Which statistical learning method most accurately predicts housing prices using other available housing features?" - we decided to use four different regression techniques: linear regression, ridge regression, lasso regression, and XGBoost.
+To answer our first research question - "Which statistical learning method most accurately predicts housing prices using other available housing features?" - we decided to use four different regression techniques: linear regression (with no shrinkage), ridge regression, lasso regression, and XGBoost.
 
-For all models, we randomly divide our data into two sets 'train' and 'test'. The 'train' set contains 80% of our entire data where as the 'test' set contains the remaining 20%. The train and the test set are the same for all both models. The response variable is 'SalePrice' and the predictors are the other 22 features we included. All numeric variables have been scaled to account for skewness.
+For all models, we **randomly** divide our data into two sets 'train' and 'test'. The 'train' set contains 80% of our entire data where as the 'test' set contains the remaining 20%. The train and the test set are the same for all both models. The response variable is 'SalePrice' and the predictors are the other 22 features we included. All numeric variables have been scaled to account for skewness.
 ```{r Scaling}
 unscaled_dat<-dat
 num_vars <- names(dat %>% select_if(is.numeric))
@@ -250,7 +251,7 @@ dat[, num_vars] <- scale(dat[, num_vars], center=TRUE, scale=TRUE)
 
 Below is a brief description of each method:
 
-**1. Linear Regression**
+**1. Linear Regression (with no shrinkage)**
 We trained our simple linear regression model on test data to predict SalePrice using all available predictors. For categorical variables, we create dummy variables.To assess the performance of our model, we predicted the sale price of houses in the test set, and examined the test error rate by measuring the root mean squares error.
 
 **2. Ridge Regression**
@@ -268,12 +269,12 @@ For our project, we trained the XGBoost algorithm on all available predictors - 
 
 ### Classification
 
-To answer our second research question relating to the classification problem, "Which statistical learning method most accurately classifies houses by neighborhood based on the other available housing features?", we decided to use two different classification models: Naive Bayes and Tree-Based Classification. For both methods we randomly divide our data into two sets 'train' and 'test'. The 'train' set contains 80% of our entire data where as the 'test' set contains the remaining 20%. The train and the test set are the same for  both models. The response variable is 'Neighborhood' and the predictors are the other 22 features we included. The numeric variables will not be scaled since neither Naive Bayes nor Tree-Based method relies on distance between two observations.
+To answer our second research question relating to the classification problem, "Which statistical learning method most accurately classifies houses by neighborhood based on the other available housing features?", we decided to use two different classification models: Naive Bayes and Tree-Based Classification. For both methods we **randomly** divideour data into two sets 'train' and 'test'. The 'train' set contains 80% of our entire data where as the 'test' set contains the remaining 20%. Since data was randomly assigned to the test and train set, we did not make sure that the neighborhoods are well represented in both the train and test set (implication of this discussed later in Limitations). The train and the test set are the same for  both models. The response variable is 'Neighborhood' and the predictors are the other 22 features we included. The numeric variables will not be scaled since neither Naive Bayes nor Tree-Based method relies on distance between two observations.
 
 Below is a brief description of each method:
 
 **1. Naive Bayes**
-To implement Naive Bayes, we used the naiveBayes() function, which is part of the e1071 library, on our train set. To evaluate the performance of our model, we predicted the response on the test data and produced a contingency table comparing the true test labels to the predictions. The housed were classified into neighborhoods based on the class with the highest probability.
+To implement Naive Bayes, we used the naiveBayes() function, which is part of the e1071 library, on our train set. To evaluate the performance of our model, we predicted the response on the test data and produced a contingency table comparing the true test labels to the predictions. The houses were classified into neighborhoods based on the class with the highest probability.
 
 **2. Tree-Based Classification**
 To implement this method, we fit a decision classification tree to the training data, using 'Neighborhood' as the response variable. We used all available predictors to fit the model. To evaluate the performance of our model, we predicted the response on the test data and produced a contingency table comparing the true test labels to the predictions. Lastly, we decided to prune the classification tree and check whether pruning improved the prediction of the response on the test set.
@@ -282,7 +283,7 @@ To implement this method, we fit a decision classification tree to the training 
 
 ### Which statistical learning method most accurately predicts housing prices using other available housing features?
 
-#### Linear Regression
+#### Linear Regression (with no shrinkage)
 
 ```{r Creating Test and Train Sets}
 set.seed(1)
@@ -311,7 +312,6 @@ To find the Root Mean Squared Error (RMSE), we re-scaled the log price back to U
 
 This means that the prediction of houses in the test set is, on average, off by USD 17,498.74. This error is small given that the the standard deviation of the sale price of the houses, as determined earlier in EDA, is USD 68,375.12.
 
-
 #### Ridge Regression
 
 ```{r}
@@ -339,9 +339,11 @@ Based on the output of the regression model, the 5 variables that seems to affec
 Neighborhood_Crawfor (a dummy that indicates whether house is in 'Crawfor' neighborhood), GrLivArea, NeighborhoodGrNoRidge
 (a dummy that indicates whether house is in 'GrNoRidge' neighborhood), OverallQual and NeighborhoodSomerst (a dummy that indicates whether house is in 'Somerst' neighborhood). The interpretation is similar to that of linear regression.
 
-The RMSE error, which has been re-scaled to USD, is 16196.87.
+The RMSE error, which has been re-scaled from logscale to USD, is 17,884.36.
 
-This implies that the prediction of houses in the test set is, on average, off by $16,196.87. This is the smallest test RMSE we've seen so far.
+This implies that the prediction of houses in the test set is, on average, off by $17,884.36. Although the RMSE is slightly larger compared to the Linear Regression (with no shrinkage), we believe that this error is small given that the the standard deviation of the sale price of the houses, as determined earlier in EDA, is USD 68,375.12.
+
+his is the smallest test RMSE we've seen so far.
 
 #### Lasso Regression
 
@@ -363,7 +365,7 @@ Based on the output, the lasso model scaled the coefficients on 28 of the 49 var
 
 The 5 variables that seems to affect the sale price of the houses are GrLivArea, YearBuilt, NeighborhoodCrawfor  (a dummy that indicates whether house is in 'Crawfor' neighborhood), OverallQual and CentralAirY(a dummy that indicates whether house is in 'Crawfor' neighborhood). The interpretation for GrLivArea, NeighborhoodCrawfor  and  OverallQual is similar to that of Linear Regression. The coefficient of  0.08 on YearBuilt implies that, controlling for other variables, newwly built houses are more expensive. Likewise, the coefficient on CentralAirY implies that, controlling for other variables, houses that have central air conditioning have sale prices higher than houses that don't have central air conditioning.
 
-The RMSE error, which has been re-scaled to USD, is 17882.54. This implies that the prediction of houses in the test set is, on average, off by $17,882.54. This error is small given that the the standard deviation of the sale price of the houses, as determined earlier in EDA, is USD 68,375.12.
+The RMSE error, which has been re-scaled from log price to USD, is 18747.09. This implies that the prediction of houses in the test set is, on average, off by $18747.09. This error is small given that the the standard deviation of the sale price of the houses, as determined earlier in EDA, is USD 68,375.12.
 
 #### XGBoost
 
@@ -400,14 +402,14 @@ xgb_mod <- xgboost(data = xgb_train, max.depth = 2, nrounds = 100) #We arbitrari
 
 If we look at the model at each iteration, the train RMSE decreases slightly. It is hard to understand what exactly the train RMSE values mean just because they are calculated based on the log-transformed SalePrice value.
 
-However, we can convert the test RMSE values back to USD values using the exp() function:
+However, we can convert the test RMSE values back to USD values using $RMSE=\frac{1}{n}\sum(e^{y_i}-e^{\hat{y_i}})^2$, where y=log of price.
 
 ```{r}
 pred_y = predict(xgb_mod, xgb_test)
 sqrt(mean((exp(test_y) - exp(pred_y))^2))
 ```
 
-This means that the prediction of houses in the test set is, on average, off by $18,810.44. This error is small given that the the standard deviation of the sale price of the houses, as determined earlier in EDA, is USD 68,375.12.
+This means that the prediction of houses in the test set is, on average, off by $19928.01. This error is still small given that the the standard deviation of the sale price of the houses, as determined earlier in EDA, is USD 68,375.12.
 
 ### Which  statistical learning method most accurately classifies houses by neighborhood based on the other available housing features?
 
@@ -424,13 +426,13 @@ classifier_cl <- naiveBayes(Neighborhood ~ ., dat[train_ids,])
 #classifier_cl
  
 # Predicting on test data
-y_pred <- predict(classifier_cl, newdata = dat[test_ids,])
+preds <- predict(classifier_cl, newdata = dat[test_ids,])
  
 # Confusion Matrix
-cm <- table(dat[test_ids,]$Neighborhood, y_pred)
+cm <- table(true=dat[test_ids,]$Neighborhood, preds)
  
 # Model Evaluation
-mean(dat[test_ids,]$Neighborhood != y_pred)
+mean(dat[test_ids,]$Neighborhood != preds)
 cm
 ```
 
@@ -447,7 +449,7 @@ plot(tree_house)
 text(tree_house,pretty=0,cex=.5)
 ```
 
-Based on the tree, it seems like YearBuilt is the most important factor for determining the class of the species since the root node is 1971.5.
+Based on the tree, it seems like YearBuilt is the most important factor for determining the class of the species since the root node is YearBuilt<1971.5. 
 
 The contingency table for the test set is:
 ```{r}
@@ -461,9 +463,10 @@ The misclassification rate is:
 mean(tree_dat[test_ids,]$Neighborhood != tree_preds)
 ```
 
-The misclassification rate of ~ 0.45 is still quite high. So we decided to check whether pruning the tree will improve the results.
+The misclassification rate of ~ 0.64 is significantly better compared to the missclassification rate observed using Naive Bayes. Having said that, misclassification rate of ~ 0.46 is still quite high. So we decided to check whether pruning the tree will improve the results.
 
 ```{r}
+set.seed(3)
 cv_house <- cv.tree(tree_house, FUN = prune.misclass, K = 10)
 cv_house
 data.frame(error_rate = cv_house$dev, size = cv_house$size, k = cv_house$k) %>%
@@ -473,9 +476,9 @@ data.frame(error_rate = cv_house$dev, size = cv_house$size, k = cv_house$k) %>%
   geom_line()+
   facet_wrap(~var, scales = "free")
 ```
-Based on the output, the tree with 8 terminal nodes seems to be the best. This is a little surprising since out data consists of a total of 13 neighborhoods; so we expected to see a minimum of 13 terminal nodes. However, we still went ahed and  pruned the original tree to obtain the 8 node tree to determine how it would affect the misclassification error.  
+Based on the output, the tree with 6 terminal nodes seems to be the best. This is a little surprising since out data consists of a total of 13 neighborhoods; so we expected to see a minimum of 13 terminal nodes. However, we still went ahead and  pruned the original tree to obtain the 6 node tree to determine how it would affect the misclassification error.  
 ```{r}
-prune_house<- prune.misclass(tree_house, best = 8)
+prune_house<- prune.misclass(tree_house, best = 6)
 plot(prune_house)
 text(prune_house,pretty=0,cex=.5)
 ```
@@ -487,13 +490,13 @@ prune_pred <- predict(prune_house, tree_dat[test_ids,],
 mean(tree_dat[test_ids,]$Neighborhood != prune_pred)
 ```
 
-Pruning increased the misclassification slightly from ~ 0.45 to ~ 0.46.
+Pruning increased the misclassification slightly from ~ 0.46 to ~ 0.48.
 
 ## Discussion
 
-To summarize the results of our regression models, we found that the Root Mean Squared Error (RMSE) was 17498.74 for  linear regression model, 16196.87 for ridge regression model and 17882.54 for the lasso model and 18810.44 for the XGBoost method. Thus, our best performing model was the ridge regression. This indicates that most of the predictors that were used in the regression impact the sale price significantly. Overall, we think that the our best performing model is a good choice to predict the sale prices as RMSE of 16196.87 is low if we compare it to the standard deviation of the sale price of houses, which was USD 68,375.12.
+To summarize the results of our regression models, we found that the Root Mean Squared Error (RMSE) was 17498.74 for  linear regression model(with no shrinkage), 17884.36 for ridge regression model and 18707.09 for the lasso model and 19928.01 for the XGBoost method. Thus, our best performing model was  linear regression (with no shrinkage). This indicates that most of the predictors that were used in the regression impact the sale price significantly; hence, shrinkage did not improve the RMSE. Overall, we think that the our best performing model is a good choice to predict the sale prices as RMSE of 17498.74 is low if we compare it to the standard deviation of the sale price of houses, which was USD 68,375.12.
 
-To summarize the results of our classification models, we found the misclassification rates of the Naive Bayes and Decision Tree models to be approximately .64 and .45, respectively. Although the tree-based method performs significantly better, we still think that the misclassification rate is really high. This suggests that perhaps the neighborhoods are not clustered based solely on the predictors we used.
+To summarize the results of our classification models, we found the misclassification rates of the Naive Bayes and Decision Tree models to be approximately .64 and .46, respectively. Although the tree-based method performs significantly better, we still think that the misclassification rate is really high. This suggests that perhaps the neighborhoods are not clustered based solely on the predictors we used.
 
 ## Limitations
 
