@@ -343,7 +343,6 @@ The RMSE error, which has been re-scaled from logscale to USD, is 17,884.36.
 
 This implies that the prediction of houses in the test set is, on average, off by $17,884.36. Although the RMSE is slightly larger compared to the Linear Regression (with no shrinkage), we believe that this error is small given that the the standard deviation of the sale price of the houses, as determined earlier in EDA, is USD 68,375.12.
 
-his is the smallest test RMSE we've seen so far.
 
 #### Lasso Regression
 
@@ -463,7 +462,7 @@ The misclassification rate is:
 mean(tree_dat[test_ids,]$Neighborhood != tree_preds)
 ```
 
-The misclassification rate of ~ 0.64 is significantly better compared to the missclassification rate observed using Naive Bayes. Having said that, misclassification rate of ~ 0.46 is still quite high. So we decided to check whether pruning the tree will improve the results.
+The misclassification rate of ~ 0.45 is significantly better compared to the missclassification rate observed using Naive Bayes. Having said that, misclassification rate of ~ 0.45 is still quite high. So we decided to check whether pruning the tree will improve the results.
 
 ```{r}
 set.seed(3)
@@ -490,13 +489,13 @@ prune_pred <- predict(prune_house, tree_dat[test_ids,],
 mean(tree_dat[test_ids,]$Neighborhood != prune_pred)
 ```
 
-Pruning increased the misclassification slightly from ~ 0.46 to ~ 0.48.
+Pruning increased the misclassification slightly from ~ 0.45 to ~ 0.48.
 
 ## Discussion
 
 To summarize the results of our regression models, we found that the Root Mean Squared Error (RMSE) was 17498.74 for  linear regression model(with no shrinkage), 17884.36 for ridge regression model and 18707.09 for the lasso model and 19928.01 for the XGBoost method. Thus, our best performing model was  linear regression (with no shrinkage). This indicates that most of the predictors that were used in the regression impact the sale price significantly; hence, shrinkage did not improve the RMSE. Overall, we think that the our best performing model is a good choice to predict the sale prices as RMSE of 17498.74 is low if we compare it to the standard deviation of the sale price of houses, which was USD 68,375.12.
 
-To summarize the results of our classification models, we found the misclassification rates of the Naive Bayes and Decision Tree models to be approximately .64 and .46, respectively. Although the tree-based method performs significantly better, we still think that the misclassification rate is really high. This suggests that perhaps the neighborhoods are not clustered based solely on the predictors we used.
+To summarize the results of our classification models, we found the misclassification rates of the Naive Bayes and Decision Tree models to be approximately .64 and .45, respectively. Although the tree-based method performs significantly better, we still think that the misclassification rate is really high. This suggests that perhaps the neighborhoods are not clustered based solely on the predictors we used.
 
 ## Limitations
 
